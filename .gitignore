@@ -2,5 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+code/data_plots.R
+code/other_figures.R
 output
 map
