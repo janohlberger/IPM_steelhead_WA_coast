@@ -1,49 +1,50 @@
 ##=================================================================##
 ##                                                                 ##
-## Load coastal steelhead population data and fit hierarchical IPM ##
+## Plots for hierarchical IPM for winter steelhead on the WA coast ##
 ##                                                                 ##
 ##=================================================================##
 
 ##========================================================## packages
-pkg<-c("here","dplyr","tidyverse","rstan","readr","readxl","tibble", "dataRetrieval","posterior","ggsidekick","RColorBrewer","ggplot2", "officer","MuMIn","ncdf4","reshape2","pracma","relaimpo","visreg", "Hmisc","bayesdfa","MARSS","faraway","gtools","gridExtra","gsl","rcartocolor","bayesplot","rstanarm","distributional","cowplot")
+pkg<-c("here","dplyr","tidyverse","rstan","readr","readxl","tibble", "dataRetrieval","posterior","ggsidekick","RColorBrewer","ggplot2", "officer","MuMIn","ncdf4","reshape2","pracma","relaimpo","visreg", "Hmisc","bayesdfa","MARSS","faraway","gtools","gridExtra","gsl","rcartocolor","bayesplot","rstanarm","distributional","cowplot","salmonIPM")
 if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdiff(pkg,rownames(installed.packages())),dependencies=T)}
 invisible(lapply(pkg,library,character.only=T))
-## devtools::install_github("ebuhle/salmonIPM@dev",auth_token=PAT)
-library(salmonIPM)
+
+##========================================================## settings
 theme_set(theme_sleek())
 options(rstudio.help.showDataPreview=FALSE)
 
-##===================================================## rstan options
-options(mc.cores=parallel::detectCores())
-rstan_options(auto_write=TRUE)
-
 ##=======================================================## functions
 home<-here::here()
-fxn<-list.files(paste0(home,"/R/functions"))
-invisible(sapply(FUN=source,paste0(home,"/R/functions/",fxn)))
+fxn<-list.files(paste0(home,"/functions"))
+invisible(sapply(FUN=source,paste0(home,"/functions/",fxn)))
+
+##================================================## output directory
+our_dir<-paste0(home,"/output/")
+if(!file.exists(our_dir)) dir.create(file.path(our_dir))
+setwd(file.path(our_dir))
 
 ##=================================================================##
 ##========================================## load data and model fit
 ##=================================================================##
+covar_effects<-TRUE ## plot model with or without covariate effects
 
 ##=========================================================## IPM fit
 ##----------------------------------------------## without covariates
 file1<-"IPM_fit_without_covars.Rdata"
-IPM_fit_without_covars<-readRDS(paste0(home,"/R/output/",file1))
+IPM_fit_without_covars<-readRDS(paste0(home,"/output/",file1))
 ##-------------------------------------------------## with covariates
 file2<-"IPM_fit_with_covars.Rdata"
-IPM_fit_with_covars<-readRDS(paste0(home,"/R/output/",file2))
+IPM_fit_with_covars<-readRDS(paste0(home,"/output/",file2))
 ##=======================================================## fish data
 ##----------------------------------------------## without covariates
 file3<-"IPM_fish_dat_without_covars.csv"
-fish_dat_without_covars<-read.csv(paste0(home,"/R/output/",file3))
+fish_dat_without_covars<-read.csv(paste0(home,"/output/",file3))
 dat_years_without_covars<-sort(unique(fish_dat_without_covars$year))
 ##-------------------------------------------------## with covariates
 file4<-"IPM_fish_dat_with_covars.csv"
-fish_dat_with_covars<-read.csv(paste0(home,"/R/output/",file4))
+fish_dat_with_covars<-read.csv(paste0(home,"/output/",file4))
 dat_years_with_covars<-sort(unique(fish_dat_with_covars$year))
 ##======================================================## main plots
-covar_effects<-TRUE
 if(covar_effects){
    IPM_fit<-IPM_fit_with_covars
    fish_dat<-fish_dat_with_covars
@@ -51,13 +52,16 @@ if(covar_effects){
    IPM_fit<-IPM_fit_without_covars
    fish_dat<-fish_dat_without_covars
 }
-IPM_fit<-IPM_fit_with_covars
-fish_dat<-fish_dat_with_covars
 pops<-unique(fish_dat$pop)
 nP<-length(pops)
 N<-dim(fish_dat)[1]
    
-##========================================================## settings
+##=======================================================## posterior
+df_post<-as.data.frame(IPM_fit) ## full posterior
+nS<-dim(df_post)[1] ## number of samples
+df_out<-data.frame(summary(IPM_fit)$summary) ## summary 
+
+##===================================================## plot settings
 colors<-colorRampPalette(brewer.pal(name="Set1",n=9))(nP)
 ##----------------------------------------------------------## colors
 # colors<-rev(c("#A86260","#A5B1C4","#3B4D6B","#89A18D","#747260","#B3872D","#774C2C")) 
@@ -72,12 +76,6 @@ probs<-c(0.05,0.25,0.5,0.75,0.95) ## median with 50% and 90% CIs
 ##=================================================================##
 ##========================## spawners, recruitment, and kelt survival
 ##=================================================================##
-df_post<-as.data.frame(IPM_fit) ## posterior of all parameters
-nS<-dim(df_post)[1] ## number of samples
-posterior<-as.array(IPM_fit) ## get full posterior 
-monitored<-dimnames(posterior)$parameters
-df_out<-data.frame(summary(IPM_fit)$summary) ## summary all parameters
-draws<-as_draws_rvars(IPM_fit)
 
 ##==============================================## estimated spawners
 S_post<-extract1(IPM_fit,"S")
