@@ -19,8 +19,8 @@ rstan_options(auto_write=TRUE)
 
 ##=======================================================## functions
 home<-here::here()
-fxn<-list.files(paste0(home,"/R/functions"))
-invisible(sapply(FUN=source,paste0(home,"/R/functions/",fxn)))
+fxn<-list.files(paste0(home,"/functions"))
+invisible(sapply(FUN=source,paste0(home,"/functions/",fxn)))
 
 ##=================================================================##
 ##=================================================================##
@@ -34,7 +34,7 @@ invisible(sapply(FUN=source,paste0(home,"/R/functions/",fxn)))
 spatial_extent<-"northcoast" ## 'OP',"coastal", "northcoast"
 cdata_type<-"rate" ## 'count' or 'rate'
 ##=======================================================## load data
-file_dir<-age_dir<-paste0(home,"/R/data/RiverFiles")
+file_dir<-age_dir<-paste0(home,"/data/RiverFiles")
 ##--------------------------------------------------------------## OP
 if(spatial_extent=="OP"){
 pops<-c("Hoh","Queets","Quillayute","Quinault") ## OP (alphabetical)
@@ -144,14 +144,14 @@ fish_dat<-fish_dat %>% mutate_at(index, ~replace_na(.,0))
 fish_dat<-fish_dat %>% dplyr::select(pop,A,year,S_obs,all_of(m_names),all_of(r_names),n_W_obs,n_H_obs,B_take_obs,fit_p_HOS,F_rate)
 
 ##==============================================## set sub-directory
-setwd(file.path(paste0(home,"/R/output/")))
+setwd(file.path(paste0(home,"/output/")))
 
 ##=================================================================##
 ##==================================================## covariate data
 ##=================================================================##
 
 ##================================================## pink salmon data
-file_path<-paste0(home,"/R/data/pink_salmon_total_abundance.xlsx")
+file_path<-paste0(home,"/data/pink_salmon_total_abundance.xlsx")
 
 pink_salmon<-data.frame(read_excel(file_path))
 pinks<-pink_salmon %>%
@@ -191,19 +191,7 @@ npgo<-npgo %>%
    mutate(across(-1,round,4))
 
 ##==================================## get ERSST data for coastal SST
-data.dir<-paste0(home,"/R/data/")
-thisYr<-as.numeric(format(Sys.Date(),"%Y"))
-sst_dat<-get_ersst_data(years=c(1960,thisYr),data.dir=data.dir ,ncfilename="sst.mnmean.nc",latrange=c(46,49),lonrange=c(-124,-127))
-
-sst_cst<-sst_dat %>% ## select 'meanSST' or 'gmeanSST' or 'resid':
-   dplyr::select(year,month,meanSST) %>%
-   data.frame() %>%
-   mutate(month=paste0("m_",month)) %>%
-   pivot_wider(names_from=month,values_from=meanSST) %>%
-   rowwise() %>%
-   mutate(SST_cst=(m_06+m_07+m_08)/3) %>%
-   dplyr::select(year,SST_cst) %>%
-   data.frame()
+sst_cst<-read.csv(paste0(home,"/data/SST_coast_JJA.csv"))
 
 # sst_cst<-sst_dat %>% ## annual only
 #    dplyr::select(year,meanSST) %>%
