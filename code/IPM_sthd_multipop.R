@@ -10,6 +10,8 @@ if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdi
 invisible(lapply(pkg,library,character.only=T))
 ## devtools::install_github("ebuhle/salmonIPM@dev",auth_token=PAT)
 library(salmonIPM)
+
+##========================================================## settings
 theme_set(theme_sleek())
 options(rstudio.help.showDataPreview=FALSE)
 
@@ -21,6 +23,11 @@ rstan_options(auto_write=TRUE)
 home<-here::here()
 fxn<-list.files(paste0(home,"/functions"))
 invisible(sapply(FUN=source,paste0(home,"/functions/",fxn)))
+
+##================================================## output directory
+our_dir<-paste0(home,"/output/")
+if(!file.exists(our_dir)) dir.create(file.path(our_dir))
+setwd(file.path(our_dir))
 
 ##=================================================================##
 ##=================================================================##
@@ -143,8 +150,8 @@ fish_dat<-fish_dat %>% mutate_at(index, ~replace_na(.,0))
 ##---------------------------------------------## columns in fish_dat
 fish_dat<-fish_dat %>% dplyr::select(pop,A,year,S_obs,all_of(m_names),all_of(r_names),n_W_obs,n_H_obs,B_take_obs,fit_p_HOS,F_rate)
 
-##==============================================## set sub-directory
-setwd(file.path(paste0(home,"/output/")))
+##==================================================## save fish data
+write.csv(fish_dat,"IPM_fish_dat_all.csv",row.names=F)
 
 ##=================================================================##
 ##==================================================## covariate data
@@ -210,21 +217,7 @@ sst_cst<-sst_cst %>%
    mutate(across(-1,round,2))
 
 ##==================================## get ERSST data for summer SST
-## SSTs are representative of the thermal conditions experienced by steelhead in the ocean, because steelhead are surface oriented and remain in the upper 20m with periodic dives to 40-60m (Burgner et al 1992, Walker et al. 2000) 
-
-# sst_dat<-read.csv(paste0(home,"/R/data/ersstArc.raw.csv"))
-# sst_dat<-sst_dat %>%
-#    filter(year>1960) %>%
-#    dplyr::select(year,month,sstarc) %>%
-#    data.frame() %>%
-#    mutate(month=paste0("m_",month)) %>%
-#    pivot_wider(names_from=month,values_from=sstarc) %>%
-#    rowwise() %>%
-#    mutate(sst=(m_6+m_7+m_8)/3) %>% ## use summer (June/July/August)
-#    dplyr::select(year,sst) %>%
-#    data.frame()
-
-sst_dat<-read.csv(paste0(home,"/R/data/ersst_sthd.csv"))
+sst_dat<-read.csv(paste0(home,"/data/ersst_sthd.csv"))
 
 sst<-sst_dat %>%
    rename(SST=sst) %>%
@@ -238,7 +231,7 @@ sst<-sst_dat %>%
 
 ##================================================## harbor seal data
 ## ONLY FOR TESTING _ MUCH FEWER YEARS OF DATA
-file_path<-paste0(home,"/R/data/harbor_seal_abundances_updated.xlsx")
+file_path<-paste0(home,"/data/harbor_seal_abundances_updated.xlsx")
 seal_data<-data.frame(read_excel(file_path)) %>%
    rename(year=Year) %>%
    rename(seals=Abundance) %>%
@@ -265,209 +258,7 @@ res<-data.frame(cor(as.matrix(df_dat),use="pairwise.complete.obs"))
 res[-1,-1]
 
 ##=================================================================##
-##=================================================================##
-##======================================================## data plots
-##=================================================================##
-##=================================================================##
-
-##=================================================================##
-##==================================================## plot fish data
-##=================================================================##
-##---------------------------------------------------## color palette
-# pic_path<-paste0(home,"/R/other/SteelheadPicture.jpg")
-# cols_pic<-create_palette(image_path=pic_path,number_of_colors=30, type_of_variable="categorical")
-# print(cols_pic)
-colors<-rev(c("#A86260","#A5B1C4","#3B4D6B","#89A18D","#747260","#B3872D","#774C2C")) 
-
-##================================================## spawners/runsize
-colors <- colorRampPalette(colors)(nP)
-
-##-------------------------------------## spawner abundances by river
-pd1 <- fish_dat %>% 
-   dplyr::select(pop,year,S_obs) %>%
-   ggplot(aes(x=year,y=S_obs,color=pop)) +
-   geom_line(aes(y=S_obs),lwd=0.5,alpha=1) +
-   geom_point(aes(y=S_obs),size=1,alpha=1) +
-   scale_color_manual(values=colors) +
-   # scale_fill_manual(values=colors) +
-   labs(x="Year",y="Spawner abundance") + 
-   theme_sleek() +
-   scale_y_continuous(limits=c(0,NA)) +
-   theme(
-      legend.position="none",
-      axis.text.x=element_text(angle=90,vjust=0.5,hjust=1),
-      axis.title=element_text(size=12),
-      axis.text=element_text(size=10)
-   ) +
-   facet_wrap(vars(pop),ncol=nP,scales="free_y") +
-   NULL
-ggsave("coastal-steelhead-spawners.pdf",pd1,width=3+2*nP,height=3)
-
-##-----------------------------------------------## run size by river
-pd2 <- fish_dat %>%
-   dplyr::select(pop,year,S_obs,F_rate) %>%
-   filter(!is.na(S_obs)) %>%
-   mutate(runsize=round(S_obs/(1-F_rate))) %>%
-   filter(!is.na(runsize)) %>%
-   mutate(runsize=ifelse(runsize==S_obs,NA,runsize)) %>%
-   ggplot(aes(x=year,y=runsize,color=pop)) +
-   geom_line(aes(y=runsize),lwd=1,alpha=1) +
-   scale_color_manual(values=colors) +
-   labs(x="Year",y="Run size") +
-   theme_sleek() +
-   theme(
-      legend.position=c(0.9,0.9),
-      legend.title=element_blank(),
-      axis.title=element_text(size=12),
-      axis.text=element_text(size=10)
-   ) +
-   NULL
-ggsave("coastal-steelhead-runsizes-oneplot.pdf",pd2,width=6,height=4)
-
-pd3 <- fish_dat %>% 
-   mutate(F_rate=ifelse(F_rate==0,NA,F_rate)) %>%
-   ggplot(aes(x=year,y=F_rate,color=pop)) +
-   geom_line(aes(y=F_rate),lwd=0.5,alpha=1) +
-   geom_point(aes(y=F_rate),size=1,alpha=1) +
-   scale_color_manual(values=colors) +
-   # scale_fill_manual(values=colors) +
-   labs(x="Year",y="Harvest rate") + 
-   theme_sleek() +
-   scale_y_continuous(limits=c(0,0.7)) +
-   theme(
-      legend.position="none",
-      axis.text.x=element_text(angle=90,vjust=0.5,hjust=1),
-      axis.title=element_text(size=12),
-      axis.text=element_text(size=10)
-   ) +
-   facet_wrap(vars(pop),ncol=nP,scales="free_y") +
-   NULL
-ggsave("coastal-steelhead-harvest-rates.pdf",pd3,width=3+2*nP,height=3)
-
-pd4 <- fish_dat %>% 
-   dplyr::select(pop,year,S_obs,F_rate) %>%
-   filter(!is.na(S_obs)) %>%
-   mutate(runsize=round(S_obs/(1-F_rate))) %>%
-   filter(!is.na(runsize)) %>%
-   mutate(runsize=ifelse(runsize==S_obs,NA,runsize)) %>%
-   ggplot(aes(x=year,y=runsize,color=pop)) +
-   #geom_line(aes(y=runsize),lwd=0.7,col="black") +
-   geom_line(aes(y=runsize),lwd=0.6,alpha=0.8) +
-   #geom_line(aes(y=S_obs),lwd=0.7,color="black",linetype="dashed") +
-   geom_line(aes(y=S_obs),lwd=0.6,linetype="dashed") +
-   #geom_point(aes(y=runsize),size=1,alpha=1) +
-   scale_color_manual(values=colors) +
-   # scale_fill_manual(values=colors) +
-   labs(x="Year",y="Abundance") + 
-   theme_sleek() +
-   scale_y_continuous(limits=c(0,NA)) +
-   theme(
-      legend.position="none",
-      axis.text.x=element_text(angle=90,vjust=0.5,hjust=1),
-      axis.title=element_text(size=12),
-      axis.text=element_text(size=10)
-   ) +
-   facet_wrap(vars(pop),ncol=nP,scales="free_y") +
-   NULL
-ggsave("coastal-steelhead-runsizes.pdf",pd4,width=3+2*nP,height=3)
-
-##---------------------------------------------## run size cumulative
-fish_dat_wide<-fish_dat %>% 
-   mutate(runsize=round(S_obs/(1-F_rate))) %>%
-   dplyr::select(pop,year,runsize) %>%
-   pivot_wider(names_from=pop,values_from=runsize) %>%
-   na.omit() %>%
-   data.frame()
-
-pdf("coastal-steelhead-cumulative-runsize.pdf",width=6,height=4)
-par(mar=c(4,4,1,1),mgp=c(2,0.5,0),tck=-0.02,cex.lab=1.2,cex.axis=0.8, xaxs="i",yaxs="i")
-ymax<-max(rowSums(fish_dat_wide))
-yrs<-unique(fish_dat_wide$year)
-plot(NA,NA,xlim=c(min(yrs),max(yrs)),ylim=c(0,ymax),xlab="Year",ylab="Run size")
-poly.x<-c(yrs,rev(yrs))
-for(i in 1:nP){
-   if(i==1) {
-      run_added<-as.vector(fish_dat_wide[,i+1])
-      poly.y<-c(run_added,rep(0,length(yrs)))
-   }
-   if(i!=1) {
-      run_prev<-run_added
-      run_added<-run_prev+fish_dat_wide[,i+1]
-      poly.y<-c(run_added,rev(run_prev))
-   }
-   polygon(poly.x,poly.y,lwd=0.5,col=colors[i],border=colors[i])
-}
-box()
-legend("topright",rev(names(fish_dat_wide)[-1]),pch=15,pt.cex=1,cex=0.6,adj=0,bty="n",col=rev(colors),xpd=T,inset=c(0,0),y.intersp=1.1)
-dev.off()
-
-##==================================================## age proportions
-ages<-colnames(fish_dat)[grepl("age",colnames(fish_dat))]
-
-##---------------------## only plot years with at least XX age samples
-min_age_samples<-10
-age_dat<-fish_dat
-age_dat[which(rowSums(age_dat[,ages])<min_age_samples),ages]<-NA
-
-##--------------------------## age proportions for maiden and repeats
-age_prop <- data.frame(cbind(age_dat %>% dplyr::select(pop,year),prop.table(age_dat[,names(age_dat) %in% ages] %>% replace(is.na(.),0) %>% as.matrix(),1)))
-
-# plot_pops<-c("Quillayute")
-# npops<-length(plot_pops)
-# age_prop<-age_prop %>% filter(pop %in% plot_pops)
-
-##-------------------## only keep age groups with prop>0.001 for plot
-av_prop<-round(colMeans(age_prop[,-c(1,2)],na.rm=T),4)
-drop<-names(av_prop)[av_prop<0.001] ## at least 0.1% of samples
-age_prop<-age_prop %>% dplyr::select(-all_of(drop))
-
-##------------------## drop years with certain age props equal to one
-# drop <- age_prop %>% filter(if_any(.cols=everything(),.fns=~.==1))
-drop <- age_prop %>% filter_all(any_vars(.==1))
-age_prop <- anti_join(age_prop, drop, by = c("pop","year"))
-
-##--------------------------------------------------------## reformat
-age_data <- age_prop  %>%
-   pivot_longer(3:last_col(),names_to="age",values_to="prop") %>%
-   mutate(MR=substr(age,7,7)) %>%
-   mutate(MR=gsub("K","repeats",MR)) %>%
-   mutate(MR=gsub("M","maiden",MR)) %>%
-   mutate(age=substr(age,6,6)) 
-
-nA<-length(unique(age_data$age))
-colors <- colorRampPalette(brewer.pal(name="Set1",n=9))(nA+1)[-1]
-
-##----------------------------## plot age proportions as points/lines
-## proportions across all spawners
-pd5<-age_data %>%
-   ggplot(aes(x=year,y=prop,color=age)) +
-   geom_line(lwd=0.2,alpha=1) +
-   geom_point(pch=16,size=1,alpha=1) +
-   scale_color_manual(values=colors) +
-   scale_fill_manual(values=colors) +
-   labs(x="Year",y="Proportion")+ 
-   theme_sleek() +
-   theme(
-      axis.title=element_text(size=12),
-      axis.text=element_text(size=6),
-      axis.text.x=element_text(angle=90,vjust=0.5,hjust=1)
-   ) +
-   facet_grid(MR~pop,scales="free_y") +
-   NULL
-ggsave("coastal-steelhead-age-data.pdf",pd5,width=4+2*nP,height=4)
-
-##=================================================================##
-##============================================## plot covariate data
-##=================================================================##
-pc1<-ggplot(pinks,aes(x=year,y=pinks))+geom_line()+theme_sleek()
-pc2<-ggplot(npgo,aes(x=year,y=NPGO))+geom_line()+theme_sleek()
-pc3<-ggplot(sst_cst,aes(x=year,y=SST_cst))+geom_line()+theme_sleek()
-pc4<-ggplot(sst,aes(x=year,y=SST))+geom_line()+theme_sleek()
-# pc5<-ggplot(seals,aes(x=year,y=seals_OP))+geom_line()+theme_sleek()
-# pc6<-ggplot(seals,aes(x=year,y=seals_CE))+geom_line()+theme_sleek()
-# gg<-grid.arrange(pc1,pc2,pc3,pc4,pc5,pc6,ncol=2)
-gg<-grid.arrange(pc1,pc2,pc3,pc4,ncol=2)
-ggsave("covariate-data.pdf",gg,width=6,height=6)
+write.csv(df_dat,"IPM_covar_dat_all.csv",row.names=F)
 
 ##=================================================================##
 ##=================================================================##
@@ -556,16 +347,11 @@ summary_CI95<-function(x) { return(data.frame(y=median(x,na.rm=T),ymin=quantile(
 summary_CI90<-function(x) { return(data.frame(y=median(x,na.rm=T),ymin=quantile(x,prob=c(0.05),na.rm=T),ymax=quantile(x,prob=c(0.95),na.rm=T))) }
 summary_CI50<-function(x) { return(data.frame(y=median(x,na.rm=T),ymin=quantile(x,prob=c(0.25),na.rm=T),ymax=quantile(x,prob=c(0.75),na.rm=T))) }
 
-##=====================================## plot diagnostics and priors
-plot_diagnostics(IPM_fit,fish_dat)
-plot_priors_vs_posteriors(IPM_fit,fish_dat,pdf=TRUE)
-
-tau_post<-extract1(IPM_fit,"tau")
-tau_median<-median(tau_post)
-
 ##=================================================================##
 ##=========================================## population productivity
 ##=================================================================##
+tau_post<-extract1(IPM_fit,"tau")
+tau_median<-median(tau_post)
 
 ##-------------------------------------------## alpha hyper parameter
 mu_alpha_post<-data.frame(exp(extract1(IPM_fit,"mu_alpha")))
