@@ -5,7 +5,7 @@
 ##=================================================================##
 
 ##========================================================## packages
-pkg<-c("here","dplyr","tidyverse","rstan","readr","readxl","tibble", "dataRetrieval","posterior","ggsidekick","RColorBrewer","ggplot2", "officer","MuMIn","ncdf4","reshape2","pracma","relaimpo","visreg", "Hmisc","bayesdfa","MARSS","faraway","gtools","gridExtra","gsl","rcartocolor","bayesplot","rstanarm","distributional","cowplot","salmonIPM")
+pkg<-c("here","tidyverse","ggplot2","ggsidekick","gridExtra","RColorBrewer","salmonIPM")
 if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdiff(pkg,rownames(installed.packages())),dependencies=T)}
 invisible(lapply(pkg,library,character.only=T))
 
@@ -62,10 +62,10 @@ nS<-dim(df_post)[1] ## number of samples
 df_out<-data.frame(summary(IPM_fit)$summary) ## summary 
 
 ##===================================================## plot settings
-colors<-colorRampPalette(brewer.pal(name="Set1",n=9))(nP)
+# colors<-colorRampPalette(brewer.pal(name="Set1",n=9))(nP)
 ##----------------------------------------------------------## colors
-# colors<-rev(c("#A86260","#A5B1C4","#3B4D6B","#89A18D","#747260","#B3872D","#774C2C")) 
-# colors <- colorRampPalette(colors)(nP)
+colors<-rev(c("#A86260","#A5B1C4","#3B4D6B","#89A18D","#747260","#B3872D","#774C2C")) 
+colors <- colorRampPalette(colors)(nP)
 ##-------------------------------------------------------## functions
 summary_CI95<-function(x) { return(data.frame(y=median(x,na.rm=T),ymin=quantile(x,prob=c(0.025),na.rm=T),ymax=quantile(x,prob=c(0.975),na.rm=T))) }
 summary_CI90<-function(x) { return(data.frame(y=median(x,na.rm=T),ymin=quantile(x,prob=c(0.05),na.rm=T),ymax=quantile(x,prob=c(0.95),na.rm=T))) }
@@ -74,7 +74,7 @@ summary_CI50<-function(x) { return(data.frame(y=median(x,na.rm=T),ymin=quantile(
 probs<-c(0.05,0.25,0.5,0.75,0.95) ## median with 50% and 90% CIs
 
 ##=================================================================##
-##========================## spawners, recruitment, and kelt survival
+##============================## spawners, recruitment, kelt survival
 ##=================================================================##
 
 ##==============================================## estimated spawners

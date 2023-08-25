@@ -5,7 +5,7 @@
 ##=================================================================##
 
 ##========================================================## packages
-pkg<-c("here","dplyr","tidyverse","rstan","readr","readxl","tibble", "dataRetrieval","posterior","ggsidekick","RColorBrewer","ggplot2", "officer","MuMIn","ncdf4","reshape2","pracma","relaimpo","visreg", "Hmisc","bayesdfa","MARSS","faraway","gtools","gridExtra","gsl","rcartocolor","bayesplot","rstanarm","distributional","cowplot","salmonIPM")
+pkg<-c("here","tidyverse","ggplot2","ggsidekick","gridExtra", "RColorBrewer","Hmisc","MuMIn","relaimpo","visreg","salmonIPM")
 if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdiff(pkg,rownames(installed.packages())),dependencies=T)}
 invisible(lapply(pkg,library,character.only=T))
 
@@ -37,6 +37,7 @@ N<-dim(fish_dat)[1]
 ##=================================================================##
 ##===========================## linear model of recruitment anomalies
 ##=================================================================##
+probs<-c(0.05,0.25,0.5,0.75,0.95) ## median with 50% and 90% CIs
 
 ##===========================================## recruitment anomalies
 eta_R_post<-extract1(IPM_fit,"eta_year_R")
@@ -59,9 +60,6 @@ df<-data.frame(cbind(df1,scale(df2))) %>% na.omit()
 ##----------------------------------------------------## correlations
 out<-data.frame(cor(as.matrix(df),use="pairwise.complete.obs"))
 out[,1:2]
-##--------------------------------------------------## even-odd dummy
-# is.even<-function(x){ x%%2 ==0 }
-# df$evenodd<-factor(is.even(df$year),labels=c("odd","even"))
 
 ##=================================================## model selection
 options(na.action="na.fail")
@@ -108,7 +106,6 @@ round(relimp_df*100,2) ## % of response variance explained by variable
 round(sum(relimp_df),2) ## total % of response variance explained
 
 ##=================================================## partial effects
-# pp1<-plot_instr( code={ ## instead of next line for ppt slides
 pdf("IPM-sthd-recruitment-anamaly-covariates-effects.pdf",width=4*nterms,height=4)
 layout(matrix(c(1:length(mod_terms)),nrow=1,byrow=T))
 par(mar=c(4,4,1,1),mgp=c(2.5,0.5,0),tcl=-0.3,cex.lab=1.2)
@@ -119,13 +116,10 @@ for(i in 1:length(mod_terms)) {
    visreg(mod,xvar=covar,xlab=xlab[i],partial=T,ylab="Partial effect on recruitment anomaly",scale="response",xtrans=xtrans,points.par=list(cex=1,pch=16,col=1),fill.par=list(col=alpha(1,0.1)),line.par=list(col=1))
 }
 dev.off()
-# }) ## instead of previous line for ppt slides
 
 ##===============================================## model predictions
-newD<-list(pinks_4=df$pinks_4,SST_4=df$SST_4,NPGO_2=df$NPGO_2)
-# newD<-list(pinks_4=df$pinks_4,SST_3=df$SST_3,NPGO_2=df$NPGO_2)
 # newD<-list(pinks_4=df$pinks_4,SST_4=df$SST_4,NPGO_2=df$NPGO_2)
-# newD<-list(pinks_4=df$pinks_4,SST_coast_2=df$SST_coast_2,seals_2=df$seals_2,NPGO_2=df$NPGO_2)
+newD<-list(pinks_4=df$pinks_4,SST_3=df$SST_3,NPGO_2=df$NPGO_2)
 predicted<-predict(mod,newdata=newD,se.fit=T,interval="confidence",level=0.95,type="response")
 pp2<-data.frame(predicted$fit) %>% 
    add_column(year=df$year) %>%
@@ -212,7 +206,6 @@ round(relimp_df*100,2) ## % of response variance explained by variable
 round(sum(relimp_df),3) ## total % of response variance explained
 
 ##=================================================## partial effects
-## pp3<-plot_instr( code={ ## instead of next line for ppt slides
 pdf("IPM-sthd-kelt-survival-anomaly-covariate-effects.pdf",width=4*nterms,height=4)
 layout(matrix(c(1:length(mod_terms)),nrow=1,byrow=T))
 par(mar=c(4,4,1,1),mgp=c(2.5,0.5,0),tcl=-0.3,cex.lab=1.2)
@@ -229,7 +222,6 @@ for(i in 1:length(mod_terms)) {
    visreg(mod,xvar=covar,xlab=xlabels$name[i],partial=T,ylab="Partial effect on kelt survival anomaly",scale="response",xtrans=xtrans,points.par=list(cex=1,pch=16,col=1),fill.par=list(col=alpha(1,0.1)),line.par=list(col=1))
 } 
 dev.off()
-## }) ## instead of previous line for ppt slides
 
 ##===============================================## model predictions
 newD<-list(SST=df$SST,pinks=df$pinks)

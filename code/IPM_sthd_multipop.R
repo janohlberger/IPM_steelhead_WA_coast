@@ -5,7 +5,7 @@
 ##=================================================================##
 
 ##========================================================## packages
-pkg<-c("here","dplyr","tidyverse","rstan","readr","readxl","tibble", "dataRetrieval","posterior","ggsidekick","RColorBrewer","ggplot2", "officer","MuMIn","ncdf4","reshape2","pracma","relaimpo","visreg", "Hmisc","bayesdfa","MARSS","faraway","gtools","gridExtra","gsl","rcartocolor","bayesplot","rstanarm","distributional") ##,"TMB"
+pkg<-c("here","dplyr","tidyverse","rstan","readr","readxl","tibble", "dataRetrieval","posterior","ggsidekick","RColorBrewer","ggplot2", "officer","MuMIn","ncdf4","reshape2","pracma","relaimpo","visreg", "Hmisc","bayesdfa","MARSS","faraway","gtools","gridExtra","gsl","rcartocolor","bayesplot","rstanarm","distributional")
 if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdiff(pkg,rownames(installed.packages())),dependencies=T)}
 invisible(lapply(pkg,library,character.only=T))
 ## devtools::install_github("ebuhle/salmonIPM@dev",auth_token=PAT)
@@ -49,7 +49,6 @@ pops<-c("Hoh","Queets","Quillayute","Quinault") ## OP (alphabetical)
 # areas<-c(299,445,629,325) ## square miles watershed
 areas<-c(4.38,6.95,9.47,6.61) ## km^2 habitat (Ohlberger et al. 2017)
 areaD<-data.frame(cbind(pop=pops,area=areas))
-# write.csv(areaD,"IPM_habitat_areas.csv",row.names=F)
 }
 ##---------------------------------------------------------## coastal
 if(spatial_extent=="coastal"){
@@ -61,6 +60,8 @@ if(spatial_extent=="northcoast"){
 pops<-c("Chehalis","Hoh","Humptulips","Queets","Quillayute","Quinault")
 areaD<-NULL
 }
+
+write.csv(areaD,"IPM_habitat_areas.csv",row.names=F)
 
 ##-----------------------------------------------## prepare fish data
 pops<-sort(pops)
@@ -261,21 +262,18 @@ res[-1,-1]
 ##=====================================## Integrated Population Model
 ##=================================================================##
 ##=================================================================##
-covar_effects<-TRUE
+covar_effects<-TRUE ## TRUE or FALSE
+##-----------------------------------## stock-recruitment function
 SR_mod<-"Ricker" 
-
-##=================================================================##
-##=========================================================## fit IPM
-##=================================================================##
-##----------------------------------------------------------## priors
+##-------------------------------------------------------## priors
 mu_p_vec<-c(0.01,0.02,0.47,0.44,0.05,0.01)
 priors<- list(
-   mu_alpha ~ normal(1.5,0.5), ## hyper mean / SD of log productivity
+   mu_alpha ~ normal(1.5,0.5), ## hyper mean/SD of log productivity
    mu_p ~ dirichlet(mu_p_vec*100), ## mean maiden age distribution
    # tau ~ gnormal(1,0.85,30), ## default: gnormal(1,0.85,30))
    mu_SS ~ beta(1.5,3) ## mean kelt survival rate
 )
-##----------------------------------------------## add covariate data
+##-------------------------------------------## add covariate data
 if(covar_effects) { ## no NAs in covariates
    fish_dat<-fish_dat %>%
       left_join(pinks,by='year') %>%
@@ -288,16 +286,16 @@ if(covar_effects) { ## no NAs in covariates
 } else {
    par_models<-NULL
 }
-##--------------------------------------------------## years included
+##-----------------------------------------------## years included
 dat_years<-sort(unique(fish_dat$year))
 nY<-length(dat_years)
-##------------------------------------## save fish data used in model
-write.csv(fish_dat,"IPM_fish_dat.csv",row.names=F)
-##-------------------------------------------## read previous IPM fit
-# IPM_fit<-readRDS(paste0(home,"/R/output/IPM_fit.Rdata"))
-# fish_dat<-read.csv(paste0(home,"/R/output/IPM_fish_dat.csv"))
-
-##=======================================================## fit model
+##---------------------------------## save fish data used in model
+if(covar_effects) { 
+   write.csv(fish_dat,"IPM_fish_dat_with_covars.csv",row.names=F)
+}else{ 
+   write.csv(fish_dat,"IPM_fish_dat_without_covars.csv",row.names=F)
+}
+##----------------------------------------------------## fit model
 IPM_fit <- salmonIPM(
    life_cycle="SSiter",
    pool_pops=TRUE,
@@ -312,30 +310,16 @@ IPM_fit <- salmonIPM(
    control=list(
       adapt_delta=0.95,  ## tests: 0.95 | final: 0.98
       max_treedepth=10 ## tests: 10 | final: 12 
-      )
    )
-## stan_pars("IPM_SSiter_pp") ## parameters monitored
-##-----------------------------------------------------## time elapsed
-## ~1h for test run; ~3h for a final run
-print(paste(round(max(rowSums(get_elapsed_time(IPM_fit))/60),2),"min"))
-##-----------------------------------------------------## save results
+)
+##-------------------------------------------------## time elapsed
+print(paste(round(max(rowSums(get_elapsed_time(IPM_fit))/60)),"min"))
+##-------------------------------------------------## save results
 if(covar_effects) { 
    saveRDS(IPM_fit,"IPM_fit_with_covars.Rdata") 
 }else{ 
    saveRDS(IPM_fit,"IPM_fit_without_covars.Rdata") 
 }
-
-##=================================================================##
-##=========================================================## results
-##=================================================================##
-df_post<-as.data.frame(IPM_fit) ## posterior of all parameters
-nS<-dim(df_post)[1] ## number of samples
-posterior<-as.array(IPM_fit) ## get full posterior 
-monitored<-dimnames(posterior)$parameters
-# monitored[grepl("_R",monitored)] 
-df_out<-data.frame(summary(IPM_fit)$summary) ## summary all parameters
-draws<-as_draws_rvars(IPM_fit) ## all draws as multidimensional array
-
 
 ##=================================================================##
 ##=================================================================##
