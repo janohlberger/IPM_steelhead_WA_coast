@@ -12,6 +12,7 @@ The repository contains three sub-directories as described below:
 | `data`      | Contains fish and covariate data used in the analysis |
 | `functions` | Contains functions for data preparation and sourcing  |
 
+## Analyses
 The `code` directory contains scripts to be run in the following order:
 
 | File                 | Description                                  |
