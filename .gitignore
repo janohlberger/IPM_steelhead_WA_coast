@@ -2,6 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+.gitignore
 code/data_plots.R
 code/other_figures.R
 output
