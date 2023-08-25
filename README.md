@@ -1,5 +1,4 @@
-# IPM_steelhead_WA_coast
-Integrated Population Model for WA coastal steelhead
+# Integrated Population Model for WA coastal steelhead
 
 ## Summary
 This repository contains code to fit a hierarchical Integrated Population Model (IPM) to multiple populations of wild winter steelhead (_Oncorhynchus mykiss_) on the Washington coast. The IPM is a statistical population dynamics models that integrates information on spawner abundances, total harvest, and spawner age structure into a combined run-reconstruction and spawner-recruitment model. It accounts for iteroparity by distinguishing maiden from repeat spawners and estimates time-varying kelt survival rates. The model also estimates population parameters such as productivity and capacity as well as time-varying recruitment residuals.
