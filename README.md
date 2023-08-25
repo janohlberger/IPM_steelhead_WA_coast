@@ -16,12 +16,9 @@ The `code` directory contains scripts to be run in the following order:
 
 | File                 | Description                                  |
 | -------------------- | -------------------------------------------- |
-| `IPM_sthd_multipop`  | Code to load the fish data and fit the IPM*  |
-| `posthoc_analysis`   | Post-hoc analysis for covariate selection**  |
-| `manuscript_figures` | Code to produce the main results figures     |
-
-* IPM to be fit twice: using covar_effects=TRUE and covar_effects=FALSE
-** Uses IPM output without covariates to perform a covariate selection
+| `IPM_sthd_multipop`  | Code to load the fish data and fit the Integrated Population Model. The IPM needs to be fit twice using covar_effects=TRUE and covar_effects=FALSE, to produce results for a model without covariates that is used in the post-hoc analysis and for a model with covariates that is used to produce the main results figures |
+| `posthoc_analysis`   | Post-hoc analysis for covariate selection |
+| `manuscript_figures` | Code to produce the main results figures |
 
 ## Dependencies
 The model fitting relies on the R package 'salmonIPM'. This package can be made available upon request to the main developer Eric Buhle via GitHub (https://github.com/ebuhle) or email (<ebuhle@gmail.com>).
