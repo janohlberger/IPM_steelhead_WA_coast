@@ -13,7 +13,7 @@ The repository contains three sub-directories as described below:
 | `functions` | Contains functions for data preparation and sourcing  |
 
 ## Analyses
-The `code` directory contains scripts to be run in the following order:
+The `code` directory contains the following scripts that need to be run:
 
 | File                 | Description                                  |
 | -------------------- | -------------------------------------------- |
