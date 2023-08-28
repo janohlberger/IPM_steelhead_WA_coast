@@ -19,9 +19,9 @@ fxn<-list.files(paste0(home,"/functions"))
 invisible(sapply(FUN=source,paste0(home,"/functions/",fxn)))
 
 ##================================================## output directory
-our_dir<-paste0(home,"/output/")
-if(!file.exists(our_dir)) dir.create(file.path(our_dir))
-setwd(file.path(our_dir))
+out_dir<-paste0(home,"/output/")
+if(!file.exists(out_dir)) dir.create(file.path(out_dir))
+setwd(file.path(out_dir))
 
 ##=================================================================##
 ##========================================## load data and model fit
