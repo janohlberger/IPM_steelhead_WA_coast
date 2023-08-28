@@ -2,13 +2,12 @@
 #' 
 #' @author Jan Ohlberger
 #' @param system river system when using a single population
-#' @param covars covariates included (TRUE) or not (FALSE)
 #' @param file_dir directory for escapement and catch data
 #' @param age_dir directory for age data 
 #' @import dataRetrieval dplyr tidyverse readr tibble
 #' @return fish data for use in IPM
 #'
-data_prep<-function(system,covars,file_dir,age_dir){
+data_prep<-function(system,file_dir,age_dir){
    ##================================================## load fish data
    syst<-substr(system,1,4)
    LCR_systems<-c("Mill Creek","Elochaman","Grays River")
@@ -101,54 +100,6 @@ data_prep<-function(system,covars,file_dir,age_dir){
       mutate(B_take_obs=catch) %>%
       mutate(Year=year) %>%
       add_column(pop=system)
-   ##============================================## add covariate data
-   if(covars){
-      ## systems and gages
-      systems<-c("Chehalis","Hoh","Humptulips","Queets","Quillayute","Quinault","Willapa")
-      gages<-c(12031000,12041200,12039500,12040500,12043000,12039500,12013500)
-      ## flow data (min and max average daily flow June to May)
-      flow<-readNWISuv(siteNumbers=gages[which(systems==system)],
-                       parameterCd="00060",
-                       startDate=paste0(min(dat$Year),"-01-01"),
-                       endDate=paste0(max(dat$Year),"-12-31"))%>%
-         renameNWISColumns() %>%
-         mutate(Date=substr(dateTime,1,10)) %>% 
-         mutate(Year=year(Date),Month=month(Date),Day=day(Date)) %>%
-         group_by(Year,Month,Day) %>%
-         dplyr::summarise(CFS_day=mean(Flow_Inst)) %>%  
-         mutate(Year=ifelse(Month>5,Year+1,Year)) %>%
-         group_by(Year) %>%
-         dplyr::summarise(CFS_min=min(CFS_day),CFS_max=max(CFS_day))
-      ## NPGO data
-      npgo_link<-"http://www.o3d.org/npgo/npgo.php"
-      NPGO<-read_table(npgo_link,skip=29,comment="#",col_names=FALSE) %>%
-         filter(!is.na(X2)) %>%
-         dplyr::rename(Year=X1,Month=X2,NPGO=X3) %>%
-         mutate(Year=as.numeric(Year)) %>%
-         group_by(Year) %>%
-         add_tally() %>%
-         filter(!Month>6) %>% #use only spring (Jan-June) NPGO
-         #filter(!n < 12) %>% #use only complete years
-         group_by(Year) %>%
-         dplyr::summarise(NPGO=mean(NPGO))
-      ## add covariate data to fish data
-      dat_names<-colnames(dat)
-      dat<-dat %>%
-         left_join(NPGO) %>%
-         left_join(flow) %>%
-         mutate(
-            ## NPGO lags
-            NPGO_lag1=lag(NPGO,1),
-            NPGO_lag2=lag(NPGO,2),
-            ## stream flow metrics (cubic feet per second)
-            CFS_min_lag2=lag(scale(CFS_min),2),
-            CFS_min_lag3=lag(scale(CFS_min),3),
-            CFS_max_lag2=lag(scale(CFS_max),2),
-            CFS_max_lag3=lag(scale(CFS_max),3),
-         )
-      all_names<-colnames(dat)
-      cov_names<-subset(all_names, !(all_names %in% dat_names)) 
-   } ## end if(covars) statement
    ##==================================## spawner age counts and total
    dat$S_obs <- dat$escapement
    dat <- dat %>% 
@@ -165,7 +116,6 @@ data_prep<-function(system,covars,file_dir,age_dir){
    ##======================================## fish data for stan model
    fish_dat<-dat %>% as.data.frame() %>% 
       dplyr::select(pop,A,year,S_obs,contains("_obs"),fit_p_HOS,F_rate)
-   if(covars) fish_dat<-fish_dat %>% cbind(dplyr::select(dat,cov_names))
    ##===================================================## return data
    return(fish_dat)
 }
