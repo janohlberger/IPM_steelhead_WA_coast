@@ -41,8 +41,8 @@ probs<-c(0.05,0.25,0.5,0.75,0.95) ## median with 50% and 90% CIs
 
 ##===========================================## recruitment anomalies
 eta_R_post<-extract1(IPM_fit,"eta_year_R")
-eta_R_qsr<-t(apply(eta_R_post,2,function(x) quantile(x,prob=probs)))
-eta_R_qs<-data.frame(eta_R_qsr) %>% add_column(year=dat_years)
+# eta_R_qsr<-t(apply(eta_R_post,2,function(x) quantile(x,prob=probs)))
+# eta_R_qs<-data.frame(eta_R_qsr) %>% add_column(year=dat_years)
 etas_R<-data.frame(median=apply(eta_R_post,2,median),sd=apply(eta_R_post,2,sd)) %>% add_column(year=dat_years)
 
 ##==============================## merge residuals and covariate data
@@ -59,7 +59,7 @@ df_sds<-sapply(df2,function(x) sd(x,na.rm=T))
 df<-data.frame(cbind(df1,scale(df2))) %>% na.omit()
 ##----------------------------------------------------## correlations
 out<-data.frame(cor(as.matrix(df),use="pairwise.complete.obs"))
-out[,1:2]
+data.frame(round(out[,1:2],3))
 
 ##=================================================## model selection
 options(na.action="na.fail")
@@ -118,8 +118,8 @@ for(i in 1:length(mod_terms)) {
 dev.off()
 
 ##===============================================## model predictions
-# newD<-list(pinks_4=df$pinks_4,SST_4=df$SST_4,NPGO_2=df$NPGO_2)
-newD<-list(pinks_4=df$pinks_4,SST_3=df$SST_3,NPGO_2=df$NPGO_2)
+newD<-list(pinks_4=df$pinks_4,SST_4=df$SST_4,NPGO_2=df$NPGO_2)
+# newD<-list(pinks_4=df$pinks_4,SST_3=df$SST_3,NPGO_2=df$NPGO_2)
 predicted<-predict(mod,newdata=newD,se.fit=T,interval="confidence",level=0.95,type="response")
 pp2<-data.frame(predicted$fit) %>% 
    add_column(year=df$year) %>%
@@ -139,8 +139,8 @@ ggsave("IPM-sthd-recruitment-anomaly-predicted-and-observed.pdf",pp2,width=5,hei
 
 ##===========================================## kelt survival anomaly
 eta_SS_post<-extract1(IPM_fit,"eta_year_SS")
-eta_SS_qs<-t(apply(eta_SS_post,2,function(x) quantile(x,prob=probs)))
-eta_SS_qs<-eta_SS_qs %>% data.frame() %>% add_column(year=dat_years) 
+# eta_SS_qs<-t(apply(eta_SS_post,2,function(x) quantile(x,prob=probs)))
+# eta_SS_qs<-eta_SS_qs %>% data.frame() %>% add_column(year=dat_years) 
 etas_SS<-data.frame(median=apply(eta_SS_post,2,median),sd=apply(eta_SS_post,2,sd)) %>% add_column(year=dat_years)
 
 ##=======================================## merge with covariate data
@@ -160,7 +160,7 @@ df_sds<-sapply(df2,function(x) sd(x,na.rm=T))
 df<-data.frame(cbind(df1,scale(df2))) %>% na.omit()
 ##----------------------------------------------------## correlations
 out<-data.frame(cor(as.matrix(df),use="pairwise.complete.obs"))
-out[,1:2]
+data.frame(round(out[,1:2],3))
 
 ##=================================================## model selection
 options(na.action="na.fail")
@@ -200,8 +200,8 @@ if(nterms>1) {
 relimp<-calc.relimp(mod,type="lmg") ## print(relimp)
 v1<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"pinks")]))
 v2<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"SST")]))
-# v3<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"NPGO")]))
-relimp_df<-data.frame(pinks=v1,sst=v2)#,npgo=v3)
+v3<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"NPGO")]))
+relimp_df<-data.frame(pinks=v1,sst=v2,npgo=v3)
 round(relimp_df*100,2) ## % of response variance explained by variable
 round(sum(relimp_df),3) ## total % of response variance explained
 
@@ -224,7 +224,8 @@ for(i in 1:length(mod_terms)) {
 dev.off()
 
 ##===============================================## model predictions
-newD<-list(SST=df$SST,pinks=df$pinks)
+# newD<-list(SST=df$SST,pinks=df$pinks)
+newD<-list(SST=df$SST,pinks=df$pinks,NPGO=df$NPGO)
 predicted<-predict(mod,newdata=newD,se.fit=T,interval="confidence",level=0.95,type="response")
 pp4<-data.frame(predicted$fit) %>% 
    add_column(year=df$year) %>%

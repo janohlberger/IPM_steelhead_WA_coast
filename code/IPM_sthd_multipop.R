@@ -44,7 +44,7 @@ if(covar_effects) { ## no NAs in covariates
    fish_dat<-fish_dat %>%
       left_join(covar_dat,by='year') %>%
       na.omit()
-   par_models<-list(s_SS~SST+pinks,R~NPGO_2+SST_4+pinks_4)
+   par_models<-list(s_SS~NPGO+SST+pinks,R~NPGO_2+SST_4+pinks_4)
 } else {
    par_models<-NULL
 }

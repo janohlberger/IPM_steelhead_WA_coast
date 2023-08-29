@@ -5,7 +5,7 @@
 ##=================================================================##
 
 ##========================================================## packages
-pkg<-c("here","tidyverse","ggplot2","ggsidekick","gridExtra","RColorBrewer","salmonIPM")
+pkg<-c("here","tidyverse","ggplot2","cowplot","ggsidekick","gridExtra","RColorBrewer","salmonIPM")
 if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdiff(pkg,rownames(installed.packages())),dependencies=T)}
 invisible(lapply(pkg,library,character.only=T))
 
@@ -287,11 +287,11 @@ ggsave("IPM-sthd-spawner-recruit-kelt.pdf",pp,width=1+2*nP,height=7.5)
 ##==============================================## without covariates
 eta_SS_post<-extract1(IPM_fit_without_covars,"eta_year_SS")
 eta_SS_qs<-t(apply(eta_SS_post,2,function(x) quantile(x,prob=probs)))
-eta_SS_qs<-eta_SS_qs %>% data.frame() %>% add_column(year=dat_years)
+eta_SS_qs<-eta_SS_qs %>% data.frame() %>% add_column(year=dat_years_without_covars)
 
 ##----------------------------------------## estimate trend over time
-etas_SS<-data.frame(median=apply(eta_SS_post,2,median),sd=apply(eta_SS_post,2,sd)) %>% add_column(year=dat_years)
-newdata<-data.frame(year=dat_years)
+etas_SS<-data.frame(median=apply(eta_SS_post,2,median),sd=apply(eta_SS_post,2,sd)) %>% add_column(year=dat_years_without_covars)
+newdata<-data.frame(year=dat_years_without_covars)
 lm_fit<-lm(etas_SS$median~etas_SS$year,weights=1/(etas_SS$sd^2))
 pred<-predict(lm_fit,newdata,interval="confidence",level=0.95)
 pred<-data.frame(pred) %>% add_column(year=etas_SS$year) 
@@ -341,13 +341,14 @@ p3 <- eta_SS_qs %>%
 ##===============================================## covariate effects
 cov_eff_post<-data.frame(extract1(IPM_fit_with_covars,"beta_SS"))
 apply(cov_eff_post,2,median)
-names(cov_eff_post)<-c("SST","Pinks")
+names(cov_eff_post)<-c("NPGO","SST","Pinks")
 ##---------------------------------------------------## effects plots
 p2 <- cov_eff_post %>% 
    pivot_longer(col=everything(),names_to="name",values_to="value") %>%
    ggplot(aes(x=name,y=value)) +
    # geom_violin(lwd=0.1,col="gray") +
-   stat_summary(fun.data=summary_CI95,size=0.25,col="goldenrod1") +
+   stat_summary(fun.data=summary_CI90,size=0.25,col="goldenrod1") +
+   # stat_summary(fun.data=summary_CI95,size=0.25,col="goldenrod1") +
    stat_summary(fun.data=summary_CI50,size=1.0,col="goldenrod1") +  
    geom_hline(yintercept=0,linetype="dashed",size=0.2) +
    scale_y_continuous(limits=c(-0.28,0.11)) +
@@ -378,11 +379,11 @@ save_plot("IPM-sthd-kelt-survival-anomaly-covariate-effects.pdf",fig, ncol=3,nro
 ##==============================================## without covariates
 eta_R_post<-extract1(IPM_fit_without_covars,"eta_year_R")
 eta_R_qsr<-t(apply(eta_R_post,2,function(x) quantile(x,prob=probs)))
-eta_R_qs<-data.frame(eta_R_qsr) %>% add_column(year=dat_years)
+eta_R_qs<-data.frame(eta_R_qsr) %>% add_column(year=dat_years_without_covars)
 
 ##----------------------------------------## estimate trend over time
-etas_R<-data.frame(median=apply(eta_R_post,2,median),sd=apply(eta_R_post,2,sd)) %>% add_column(year=dat_years)
-newdata<-data.frame(year=dat_years)
+etas_R<-data.frame(median=apply(eta_R_post,2,median),sd=apply(eta_R_post,2,sd)) %>% add_column(year=dat_years_without_covars)
+newdata<-data.frame(year=dat_years_without_covars)
 lm_fit<-lm(etas_R$median~etas_R$year,weights=1/(etas_R$sd^2))
 pred<-predict(lm_fit,newdata,interval="confidence",level=0.95)
 pred<-data.frame(pred) %>% add_column(year=etas_R$year) 
@@ -446,7 +447,8 @@ p2 <- beta_R_post %>%
    pivot_longer(col=everything(),names_to="name",values_to="value") %>%
    ggplot(aes(x=name,y=value)) +
    geom_violin(lwd=0.1,col="white") +
-   stat_summary(fun.data=summary_CI95,size=0.25,color="goldenrod1") +
+   stat_summary(fun.data=summary_CI90,size=0.25,color="goldenrod1") +
+   # stat_summary(fun.data=summary_CI95,size=0.25,color="goldenrod1") +
    stat_summary(fun.data=summary_CI50,size=1.0,color="goldenrod1") +  
    geom_hline(yintercept=0,linetype="dashed",size=0.2) +
    labs(x="",y="Effect size") + 
