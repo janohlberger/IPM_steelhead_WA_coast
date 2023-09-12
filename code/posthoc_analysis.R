@@ -59,7 +59,7 @@ df_sds<-sapply(df2,function(x) sd(x,na.rm=T))
 df<-data.frame(cbind(df1,scale(df2))) %>% na.omit()
 ##----------------------------------------------------## correlations
 out<-data.frame(cor(as.matrix(df),use="pairwise.complete.obs"))
-data.frame(round(out[,1:2],3))
+# data.frame(round(out[,1:2],3))
 
 ##=================================================## model selection
 options(na.action="na.fail")
@@ -160,7 +160,7 @@ df_sds<-sapply(df2,function(x) sd(x,na.rm=T))
 df<-data.frame(cbind(df1,scale(df2))) %>% na.omit()
 ##----------------------------------------------------## correlations
 out<-data.frame(cor(as.matrix(df),use="pairwise.complete.obs"))
-data.frame(round(out[,1:2],3))
+# data.frame(round(out[,1:2],3))
 
 ##=================================================## model selection
 options(na.action="na.fail")
@@ -203,7 +203,7 @@ v2<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"SST")]))
 v3<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"NPGO")]))
 relimp_df<-data.frame(pinks=v1,sst=v2,npgo=v3)
 round(relimp_df*100,2) ## % of response variance explained by variable
-round(sum(relimp_df),3) ## total % of response variance explained
+round(sum(relimp_df),2) ## total % of response variance explained
 
 ##=================================================## partial effects
 pdf("IPM-sthd-kelt-survival-anomaly-covariate-effects.pdf",width=4*nterms,height=4)

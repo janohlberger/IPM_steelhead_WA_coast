@@ -58,7 +58,7 @@ if(covar_effects) {
    write.csv(fish_dat,"IPM_fish_dat_without_covars.csv",row.names=F)
 }
 ##-------------------------------------------------------## fit model
-IPM_fit <- salmonIPM(
+IPM_fit<-salmonIPM(
    life_cycle="SSiter",
    pool_pops=TRUE,
    SR_fun=SR_mod, 
@@ -67,13 +67,10 @@ IPM_fit <- salmonIPM(
    prior=priors,
    pars=c(stan_pars("IPM_SSiter_pp")),
    chains=3, 
-   iter=1000, ## tests: 1000 | final: 2000
-   warmup=500, ## tests: 500 | final: 1000
-   control=list(
-      adapt_delta=0.95,  ## tests: 0.95 | final: 0.98
-      max_treedepth=10 ## tests: 10 | final: 12 
-   )
-)
+   iter=2000,
+   warmup=1000, 
+   control=list(adapt_delta=0.99,max_treedepth=12)
+) ## adapt_delta/max_treedepth: tests=0.95/10 | final=0.99/12
 ##----------------------------------------------------## time elapsed
 print(paste(round(max(rowSums(get_elapsed_time(IPM_fit))/60)),"min"))
 ##----------------------------------------------------## save results

@@ -74,6 +74,34 @@ summary_CI50<-function(x) { return(data.frame(y=median(x,na.rm=T),ymin=quantile(
 probs<-c(0.05,0.25,0.5,0.75,0.95) ## median with 50% and 90% CIs
 
 ##=================================================================##
+##=======================## observation error, productivity, capacity
+##=================================================================##
+
+##===============================================## observation error
+tau_post<-extract1(IPM_fit,"tau")
+tau_median<-median(tau_post)
+
+##============================================## productivity (alpha)
+alphas_post<-data.frame(extract1(IPM_fit,"alpha"))
+names(alphas_post)<-pops
+alpha_qs<-apply(alphas_post,2,function(x) quantile(x,prob=probs))
+alpha_medians<-round(apply(alphas_post,2,median),1)
+
+mu_alpha_post<-data.frame(exp(extract1(IPM_fit,"mu_alpha")))
+names(mu_alpha_post)<-" mu_alpha "
+mu_alpha_qs<-t(apply(mu_alpha_post,2,function(x) quantile(x,prob=probs)))
+
+##=================================================## capacity (Rmax)
+Rmax_post<-data.frame(extract1(IPM_fit,"Rmax"))
+names(Rmax_post)<-pops
+Rmax_qs<-apply(Rmax_post,2,function(x) quantile(x,prob=probs))
+Rmax_medians<-round(apply(Rmax_post,2,median))
+
+mu_Rmax_post<-data.frame(exp(extract1(IPM_fit,"mu_Rmax")))
+names(mu_Rmax_post)<-" mu_Rmax"
+mu_Rmax_qs<-t(apply(mu_Rmax_post,2,function(x) quantile(x,prob=probs)))
+
+##=================================================================##
 ##============================## spawners, recruitment, kelt survival
 ##=================================================================##
 
@@ -297,7 +325,7 @@ pred<-predict(lm_fit,newdata,interval="confidence",level=0.95)
 pred<-data.frame(pred) %>% add_column(year=etas_SS$year) 
 
 ##------------------------------------------------------------## plot
-p1 <- eta_SS_qs %>%
+p1a <- eta_SS_qs %>%
    ggplot(aes(x=year,y=X50.)) +
    geom_line(lwd=0.4,alpha=1) +
    geom_ribbon(aes(ymin=X25.,ymax=X75.),color=NA,alpha=0.3) +
@@ -309,6 +337,10 @@ p1 <- eta_SS_qs %>%
    #geom_line(data=pred,aes(y=lwr),lwd=0.2,color="darkgray",alpha=1) +
    #geom_line(data=pred,aes(y=upr),lwd=0.2,color="darkgray",alpha=1) +
    theme_sleek() +
+   theme(axis.text.x=element_text(size=12),
+         axis.title.x=element_text(size=15),
+         axis.text.y=element_text(size=12),
+         axis.title.y=element_text(size=15)) +
    NULL
 
 ##=================================================## with covariates
@@ -324,7 +356,7 @@ pred<-predict(lm_fit,newdata,interval="confidence",level=0.95)
 pred<-data.frame(pred) %>% add_column(year=etas_SS$year) 
 
 ##------------------------------------------------------------## plot
-p3 <- eta_SS_qs %>%
+p1c <- eta_SS_qs %>%
    ggplot(aes(x=year,y=X50.)) +
    geom_line(lwd=0.4,alpha=1) +
    geom_ribbon(aes(ymin=X25.,ymax=X75.),fill="goldenrod1",color="darkgray",alpha=0.3,lwd=0.2) +
@@ -336,6 +368,10 @@ p3 <- eta_SS_qs %>%
    #geom_line(data=pred,aes(y=lwr),lwd=0.2,color="darkgray",alpha=1) +
    #geom_line(data=pred,aes(y=upr),lwd=0.2,color="darkgray",alpha=1) +
    theme_sleek() +
+   theme(axis.text.x=element_text(size=12),
+         axis.title.x=element_text(size=15),
+         axis.text.y=element_text(size=12),
+         axis.title.y=element_text(size=15)) +
    NULL
 
 ##===============================================## covariate effects
@@ -343,7 +379,7 @@ cov_eff_post<-data.frame(extract1(IPM_fit_with_covars,"beta_SS"))
 apply(cov_eff_post,2,median)
 names(cov_eff_post)<-c("NPGO","SST","Pinks")
 ##---------------------------------------------------## effects plots
-p2 <- cov_eff_post %>% 
+p1b <- cov_eff_post %>% 
    pivot_longer(col=everything(),names_to="name",values_to="value") %>%
    ggplot(aes(x=name,y=value)) +
    # geom_violin(lwd=0.1,col="gray") +
@@ -354,7 +390,10 @@ p2 <- cov_eff_post %>%
    scale_y_continuous(limits=c(-0.28,0.11)) +
    labs(x="",y="Effect size") + 
    theme_sleek() +
-   theme(axis.title.x=element_blank()) +
+   theme(axis.title.x=element_blank(),
+         axis.text.x=element_text(size=12),
+         axis.text.y=element_text(size=12),
+         axis.title.y=element_text(size=15)) +
    NULL
 ##------------------------------------## probability above/below zero
 my_pnorm<-function(x,output){ return(pnorm(0,mean=x[1],sd=x[2])) }
@@ -362,15 +401,6 @@ beta_df<-data.frame(apply(cov_eff_post,2,median),
                     apply(cov_eff_post,2,sd))
 prob_below_zero<-apply(beta_df,1,my_pnorm)
 prob_above_zero <- 1-prob_below_zero
-
-##===================================================## combine plots
-fig<-ggdraw() + 
-   draw_plot(p1,x=0.0,y=0,width=0.4,height=1,scale=0.95) +
-   draw_plot(p2,x=0.4,y=0.045,width=0.2,height=0.955,scale=0.95) +
-   draw_plot(p3,x=0.6,y=0,width=0.4,height=1,scale=0.95) +
-   draw_plot_label(label=c("A","B","C"),x=c(0,0.4,0.6),y=c(1,1,1))
-
-save_plot("IPM-sthd-kelt-survival-anomaly-covariate-effects.pdf",fig, ncol=3,nrow=1,base_height=4,base_width=4)
 
 ##=================================================================##
 ##===========================================## recruitment anomalies
@@ -389,7 +419,7 @@ pred<-predict(lm_fit,newdata,interval="confidence",level=0.95)
 pred<-data.frame(pred) %>% add_column(year=etas_R$year) 
 
 ##------------------------------------------------------------## plot
-p1 <- eta_R_qs %>%
+p2a <- eta_R_qs %>%
    ## plot median recruitment residuals and 95% CIs
    ggplot(aes(x=year,y=X50.)) +
    geom_line(lwd=0.4,alpha=1) +
@@ -402,6 +432,10 @@ p1 <- eta_R_qs %>%
    #geom_line(data=pred,aes(y=lwr),lwd=0.2,color="darkgray",alpha=1) +
    #geom_line(data=pred,aes(y=upr),lwd=0.2,color="darkgray",alpha=1) +
    theme_sleek() +
+   theme(axis.text.x=element_text(size=12),
+         axis.title.x=element_text(size=15),
+         axis.text.y=element_text(size=12),
+         axis.title.y=element_text(size=15)) +
    NULL
 
 ##=================================================## with covariates
@@ -417,7 +451,7 @@ pred<-predict(lm_fit,newdata,interval="confidence",level=0.95)
 pred<-data.frame(pred) %>% add_column(year=etas_R$year) 
 
 ##------------------------------------------------------------## plot
-p3 <- eta_R_qs %>%
+p2c <- eta_R_qs %>%
    ## plot median recruitment residuals and 95% CIs
    ggplot(aes(x=year,y=X50.)) +
    geom_line(lwd=0.4,alpha=1) +
@@ -430,6 +464,10 @@ p3 <- eta_R_qs %>%
    #geom_line(data=pred,aes(y=lwr),lwd=0.2,color="darkgray",alpha=1) +
    #geom_line(data=pred,aes(y=upr),lwd=0.2,color="darkgray",alpha=1) +
    theme_sleek() +
+   theme(axis.text.x=element_text(size=12),
+         axis.title.x=element_text(size=15),
+         axis.text.y=element_text(size=12),
+         axis.title.y=element_text(size=15)) +
    NULL
 
 ##===============================================## covariate effects
@@ -443,7 +481,7 @@ names(beta_R_post)<-c("NPGO","SST","Pinks")
 # names(beta_R_post)<-c(cov1,cov2,cov3)
 
 ##---------------------------------------------------## effects plots
-p2 <- beta_R_post %>% 
+p2b <- beta_R_post %>% 
    pivot_longer(col=everything(),names_to="name",values_to="value") %>%
    ggplot(aes(x=name,y=value)) +
    geom_violin(lwd=0.1,col="white") +
@@ -453,9 +491,12 @@ p2 <- beta_R_post %>%
    geom_hline(yintercept=0,linetype="dashed",size=0.2) +
    labs(x="",y="Effect size") + 
    theme_sleek() +
-   theme(axis.title.x=element_blank()) +
+   theme(axis.title.x=element_blank(),
+         axis.text.x=element_text(size=12),
+         axis.text.y=element_text(size=12),
+         axis.title.y=element_text(size=15)) +
    NULL
-
+                            
 ##---------------------------------## probability above/below zero
 my_pnorm<-function(x,output){ return(pnorm(0,mean=x[1],sd=x[2])) }
 beta_df<-data.frame(apply(beta_R_post,2,median),
@@ -463,14 +504,28 @@ beta_df<-data.frame(apply(beta_R_post,2,median),
 prob_below_zero<-apply(beta_df,1,my_pnorm)
 prob_above_zero <- 1-prob_below_zero
 
-##===================================================## combine plots
-fig<-ggdraw() + 
-   draw_plot(p1,x=0.0,y=0,width=0.4,height=1,scale=0.95) +
-   draw_plot(p2,x=0.4,y=0.045,width=0.2,height=0.955,scale=0.95) +
-   draw_plot(p3,x=0.6,y=0,width=0.4,height=1,scale=0.95) +
-   draw_plot_label(label=c("A","B","C"),x=c(0,0.4,0.6),y=c(1,1,1))
+##=================================================================##
+##==========## combined recruitment and kelt survival anomaly figures
+##=================================================================##
+title<-paste0("      Models without covariates                    ",
+             "     Covariate effects                             ",
+             " Models with covariates")
 
-save_plot("IPM-sthd-recruitment-anomaly-covariate-effects.pdf",fig,ncol=3,nrow=1,base_height=4,base_width=4)
+fig<-ggdraw() +
+   theme(plot.margin=margin(20,0,0,0)) +
+   draw_label(title,x=0.5,y=1,hjust=0.5,vjust=0,size=15,fontface="bold")+
+   draw_plot(p1a,x=0.0,y=0,width=0.4,height=0.5,scale=0.95) +
+   draw_plot(p1b,x=0.4,y=0.02,width=0.2,height=0.48,scale=0.95) +
+   draw_plot(p1c,x=0.6,y=0,width=0.4,height=0.5,scale=0.95) +
+   draw_plot(p2a,x=0.0,y=0.5,width=0.4,height=0.5,scale=0.95) +
+   draw_plot(p2b,x=0.4,y=0.52,width=0.2,height=0.48,scale=0.95) +
+   draw_plot(p2c,x=0.6,y=0.5,width=0.4,height=0.5,scale=0.95) +
+   draw_plot_label(label=c("A","B","C","D","E","F"),
+                   x=c(0,0.4,0.6,0,0.4,0.6),
+                   y=c(1,1,1,0.5,0.5,0.5),
+                   size=15)
+
+save_plot("IPM-sthd-covariate-effects-recruitment-and-kelt-survival.pdf",fig,ncol=3,nrow=2,base_height=4,base_width=4)
 
 ##=================================================================##
 ##=================================================================##
