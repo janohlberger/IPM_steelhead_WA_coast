@@ -69,7 +69,7 @@ IPM_fit<-salmonIPM(
    chains=3, 
    iter=2000,
    warmup=1000, 
-   control=list(adapt_delta=0.99,max_treedepth=12)
+   control=list(adapt_delta=0.95,max_treedepth=10)
 ) ## adapt_delta/max_treedepth: tests=0.95/10 | final=0.99/12
 ##----------------------------------------------------## time elapsed
 print(paste(round(max(rowSums(get_elapsed_time(IPM_fit))/60)),"min"))
