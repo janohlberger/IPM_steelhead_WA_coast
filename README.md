@@ -25,7 +25,7 @@ The `code` directory contains the following scripts that need to be run:
 ** The IPM needs to be fit twice using covar_effects=TRUE and covar_effects=FALSE, to produce results for a model without covariates that is used in the post-hoc analysis and for a model with covariates that is used to produce the main results figures 
 
 ## Dependencies
-The model fitting relies on the R package 'salmonIPM'. This package can be made available upon request to the main developer Eric Buhle via GitHub (https://github.com/ebuhle) or email (<ebuhle@gmail.com>).
+The model fitting relies on the R package 'salmonIPM'. This package can be made available upon request to the main developer Eric Buhle via GitHub (https://github.com/ebuhle) or email (<eric.buhle@noaa.gov>).
 
 ## Output
 The code described above produces the main results figures shown in Ohlberger et al. (unpublished).
