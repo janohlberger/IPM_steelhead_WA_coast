@@ -5,7 +5,7 @@
 ##=================================================================##
 
 ##========================================================## packages
-pkg<-c("here","tidyverse","readr","readxl") #,"tibble")
+pkg<-c("here","tidyverse","readr","readxl","dataRetrieval","lubridate")
 if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdiff(pkg,rownames(installed.packages())),dependencies=T)}
 invisible(lapply(pkg,library,character.only=T))
 home<-here::here()
@@ -42,7 +42,8 @@ pops<-c("Chehalis","Hoh","Humptulips","Queets","Quillayute","Quinault")
 areaD<-NULL
 }
 write.csv(areaD,"IPM_habitat_areas.csv",row.names=F)
-
+##------------------------------------------------## Quillayute flows
+# Bogachiel=12042800 Calawah=12043000 Dickey=12043100 SolDuc=12042500
 ##-----------------------------------------------## prepare fish data
 pops<-sort(pops)
 nP<-length(pops)
@@ -58,12 +59,11 @@ fish_dat$S_obs[fish_dat$pop=="Grays River" & fish_dat$year==1999]<-1000
 }
 ##-----------------------------## only years with observed escapement
 fish_dat<-fish_dat %>% filter(S_obs>0) 
-# fish_dat<-fish_dat[!is.na(fish_dat$year),]
 all_years<-sort(unique(fish_dat$year))
 ##------------------------------------------## add area by population
 if(spatial_extent %in% c("OP")){
 fish_dat<-fish_dat %>% 
-   left_join(data.frame(cbind(pop=pops,area=areas))) %>%
+   full_join(data.frame(cbind(pop=pops,area=areas))) %>%
    mutate_at('area',as.numeric) %>%
    dplyr::select(-A) %>%
    rename(A=area)
@@ -78,7 +78,7 @@ frst_yrs<-fish_dat %>%
    dplyr::select(pop,min_year=year)
 ##---------------## drop data prior to first catch year minus min age
 fish_dat<-fish_dat %>% 
-   left_join(frst_yrs) %>%
+   full_join(frst_yrs) %>%
    filter(year>min_year-3) %>% ## min_age=2
    dplyr::select(-min_year)
 ## now early year NAs in F_rate/B_take_obs can be set to zero because post-removal spawner abundance in years 1:min_age is drawn from prior
@@ -125,7 +125,7 @@ nages<-length(colnames(fish_dat)[grepl("M_obs",colnames(fish_dat))])
 m_names<-sort(names(fish_dat)[grepl("M_obs",names(fish_dat))])
 r_names<-sort(names(fish_dat)[grepl("K_obs",names(fish_dat))])
 ##-----------------------------------## convert NA in ages into zeros
-index<-which(names(fish_dat) %in% c(m_names,r_names)) ## "B_take_obs"
+index<-which(names(fish_dat) %in% c(m_names,r_names)) 
 fish_dat<-fish_dat %>% mutate_at(index, ~replace_na(.,0))
 ##---------------------------------------------## columns in fish_dat
 fish_dat<-fish_dat %>% dplyr::select(pop,A,year,S_obs,all_of(m_names),all_of(r_names),n_W_obs,n_H_obs,B_take_obs,fit_p_HOS,F_rate)
@@ -137,7 +137,7 @@ write.csv(fish_dat,"IPM_fish_dat_all.csv",row.names=F)
 ##==================================================## covariate data
 ##=================================================================##
 
-##================================================## pink salmon data
+##==========================================## pink salmon abundances
 file_path<-paste0(home,"/data/pink_salmon_total_abundance.xlsx")
 
 pink_salmon<-data.frame(read_excel(file_path))
@@ -155,7 +155,7 @@ pinks<-pinks %>%
    ) %>%
    mutate(across(-1,round,2))
 
-##===================================================## get NPGO data
+##============================================================## NPGO
 npgo<-read_table("http://www.o3d.org/npgo/npgo.php",skip=29,col_names=F,comment="#") %>%
    filter(!is.na(X2)) %>%
    dplyr::rename(Year=X1,Month=X2,NPGO=X3) %>%
@@ -177,7 +177,7 @@ npgo<-npgo %>%
    ) %>%
    mutate(across(-1,round,4))
 
-##==================================## get ERSST data for coastal SST
+##======================================## ERSST data for coastal SST
 sst_cst<-read.csv(paste0(home,"/data/SST_coast_JJA.csv"))
 
 sst_cst<-sst_cst %>%
@@ -203,15 +203,15 @@ sst<-sst_dat %>%
    mutate(across(-1,round,4))
 
 ##================================================## harbor seal data
-## ONLY FOR TESTING - MUCH FEWER YEARS OF DATA
-file_path<-paste0(home,"/data/harbor_seal_abundances_updated.xlsx")
+## Only for test runs - much fewer years of data
+file_path<-paste0(home,"/data/harbor_seal_abundances.xlsx")
 seal_data<-data.frame(read_excel(file_path)) %>%
    rename(year=Year) %>%
    rename(seals=Abundance) %>%
    dplyr::select(year,seals)
 
 seals<-data.frame(year=all_years) %>%
-   left_join(seal_data) %>%
+   full_join(seal_data) %>%
    mutate(
       seals_2=lead(seals,2),
       seals_3=lead(seals,3),
@@ -219,23 +219,37 @@ seals<-data.frame(year=all_years) %>%
    ) %>%
    mutate(across(-1,round,2))
 
-##----------------------------------------------------## combine data
+##=====================================================## river flows
+flow_data<-read.csv(paste0(home,"/data/flow_data.csv"))
+
+flows<-flow_data %>%
+   mutate(av_CFS_min_1=lead(av_CFS_min,1),
+          av_CFS_max_1=lead(av_CFS_max,1)
+          ) %>%
+   mutate(across(-1,round,4))
+
+##===========================================## combine data and save
 covar_dat<-pinks %>%
-   left_join(npgo,by='year') %>%
-   left_join(sst,by='year') %>%
-   left_join(sst_cst,by='year') %>%
+   full_join(npgo,by='year') %>%
+   full_join(sst,by='year') %>%
+   full_join(sst_cst,by='year') %>%
+   full_join(flows,by='year') %>%
    filter(year>min(fish_dat$year))
 
-##============================================================## save
 write.csv(covar_dat,"IPM_covar_dat_all.csv",row.names=F)
 
-##----------------------------------------------------## correlations
-df_dat<-covar_dat %>%
-   dplyr::select(-c(matches("[[:digit:]]"))) %>%
-   na.omit() ## no NAs in covariates
-
-res<-data.frame(cor(as.matrix(df_dat),use="pairwise.complete.obs"))
-res[-1,-1]
+##===================================================## include flows
+## can't be included in post-hoc test of shared residuals
+## can be included to model recruitment in the IPM though
+##----------------------------------------------------## combine data
+# covar_dat<-flows %>%
+#    full_join(pinks,by='year') %>%
+#    full_join(npgo,by='year') %>%
+#    full_join(sst,by='year') %>%
+#    full_join(sst_cst,by='year') %>%
+#    filter(year>min(fish_dat$year))
+# 
+# write.csv(covar_dat,"IPM_covar_dat_with_flows.csv",row.names=F)
 
 ##=================================================================##
 ##=================================================================##

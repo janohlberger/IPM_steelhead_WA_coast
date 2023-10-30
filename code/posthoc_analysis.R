@@ -41,8 +41,6 @@ probs<-c(0.05,0.25,0.5,0.75,0.95) ## median with 50% and 90% CIs
 
 ##===========================================## recruitment anomalies
 eta_R_post<-extract1(IPM_fit,"eta_year_R")
-# eta_R_qsr<-t(apply(eta_R_post,2,function(x) quantile(x,prob=probs)))
-# eta_R_qs<-data.frame(eta_R_qsr) %>% add_column(year=dat_years)
 etas_R<-data.frame(median=apply(eta_R_post,2,median),sd=apply(eta_R_post,2,sd)) %>% add_column(year=dat_years)
 
 ##==============================## merge residuals and covariate data
@@ -59,7 +57,7 @@ df_sds<-sapply(df2,function(x) sd(x,na.rm=T))
 df<-data.frame(cbind(df1,scale(df2))) %>% na.omit()
 ##----------------------------------------------------## correlations
 out<-data.frame(cor(as.matrix(df),use="pairwise.complete.obs"))
-# data.frame(round(out[,1:2],3))
+res<-data.frame(round(out[-c(1:3),1:2],2)) %>% dplyr::select(-year)
 
 ##=================================================## model selection
 options(na.action="na.fail")
@@ -67,7 +65,7 @@ options(na.action="na.fail")
 form<-formula(residuals~pinks_4+NPGO_2+SST_3+SST_cst_1) 
 ##--------------------------------------------------------## all lags
 ## models w/o NPGO not as good (but depends on spatial scale)
-form<-formula(residuals~pinks_2+pinks_3+pinks_4+NPGO_2+NPGO_3+NPGO_4+SST_2+SST_3+SST_4+SST_cst_2+SST_cst_3+SST_cst_4) 
+form<-formula(residuals~pinks_2+pinks_3+pinks_4+NPGO_2+NPGO_3+NPGO_4+SST_2+SST_3+SST_4+SST_cst_2+SST_cst_3+SST_cst_4+av_CFS_min+av_CFS_max+av_CFS_min_1+av_CFS_max_1) 
 ##---------------------------------------------------## model fitting
 # mod_lm_full<-lm(form,data=df,weights=1/(sd^2))
 mod_lm_full<-lm(form,data=df)
@@ -75,8 +73,8 @@ mod_select<-dredge(mod_lm_full,trace=F,rank="AICc")
 aic_table<-data.frame(mod_select)[1:10,-1];aic_table
 mod_delta2<-aic_table[aic_table$delta<2,] ## models with delta_AIC<2
 index<-which(mod_delta2$df==min(mod_delta2$df)) 
-mod_sel<-get.models(mod_select,subset=index)[[1]] ## use simple model
-# mod_sel<-get.models(mod_select,subset=1)[[1]] ## use lowest AICc
+# mod_sel<-get.models(mod_select,subset=index)[[1]] ## simpler model
+mod_sel<-get.models(mod_select,subset=1)[[1]] ## lowest AICc
 summary(mod_sel)
 ncovar<-dim(summary(mod_sel)$coefficients)[1]-1
 par(mfcol=c(1,ncovar),mar=c(4,4,1,1));visreg(mod_sel)
@@ -94,7 +92,7 @@ mod_terms<-as.character(names(mod[[1]])[-1])
 nterms<-length(mod_terms)
 test_data<-df[,colnames(df) %in% mod_terms]
 test<-apply(test_data,2,function(x) as.numeric(as.character(x)))
-round(rcorr(test,type="pearson")$r,2) ## SST_acr~pinks corr: 0.14
+round(rcorr(test,type="pearson")$r,2)
 
 ##=============================================## variable importance
 relimp<-calc.relimp(mod,type="lmg") ## print(relimp)
@@ -139,11 +137,10 @@ ggsave("IPM-sthd-recruitment-anomaly-predicted-and-observed.pdf",pp2,width=5,hei
 
 ##===========================================## kelt survival anomaly
 eta_SS_post<-extract1(IPM_fit,"eta_year_SS")
-# eta_SS_qs<-t(apply(eta_SS_post,2,function(x) quantile(x,prob=probs)))
-# eta_SS_qs<-eta_SS_qs %>% data.frame() %>% add_column(year=dat_years) 
 etas_SS<-data.frame(median=apply(eta_SS_post,2,median),sd=apply(eta_SS_post,2,sd)) %>% add_column(year=dat_years)
 
 ##=======================================## merge with covariate data
+## leads/lags not used for kelt survival
 df<-data.frame(year=seq(min(dat_years-4),max(dat_years),1)) %>%
    left_join(etas_SS %>% dplyr::select(year,median,sd)) %>%
    rename(survival=median) %>%
@@ -160,12 +157,12 @@ df_sds<-sapply(df2,function(x) sd(x,na.rm=T))
 df<-data.frame(cbind(df1,scale(df2))) %>% na.omit()
 ##----------------------------------------------------## correlations
 out<-data.frame(cor(as.matrix(df),use="pairwise.complete.obs"))
-# data.frame(round(out[,1:2],3))
+res<-data.frame(round(out[-c(1:3),1:2],2)) %>% dplyr::select(-year)
 
 ##=================================================## model selection
 options(na.action="na.fail")
 ##---------------------------------------------------------## no lags
-form<-formula(survival~pinks+NPGO+SST+SST_cst) 
+form<-formula(survival~pinks+NPGO+SST+SST_cst+av_CFS_min+av_CFS_max) 
 ##---------------------------------------------------## model fitting
 # mod_lm_full<-lm(form,data=df,weights=1/(sd^2))
 mod_lm_full<-lm(form,data=df)
@@ -173,8 +170,8 @@ mod_select<-dredge(mod_lm_full,trace=F,rank="AICc")
 aic_table<-data.frame(mod_select)[1:10,-1];aic_table
 mod_delta2<-aic_table[aic_table$delta<2,] ## models with delta_AIC<2
 index<-which(mod_delta2$df==min(mod_delta2$df))
-mod_sel<-get.models(mod_select,subset=index)[[1]] ## use simple model
-# mod_sel<-get.models(mod_select,subset=1)[[1]] ## use lowest AICc
+# mod_sel<-get.models(mod_select,subset=index)[[1]] ## simpler model
+mod_sel<-get.models(mod_select,subset=1)[[1]] ## lowest AICc
 summary(mod_sel)
 ncovar<-dim(summary(mod_sel)$coefficients)[1]-1
 par(mfcol=c(1,ncovar),mar=c(4,4,1,1));visreg(mod_sel)

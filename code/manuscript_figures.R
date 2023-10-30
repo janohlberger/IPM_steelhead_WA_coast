@@ -5,7 +5,7 @@
 ##=================================================================##
 
 ##========================================================## packages
-pkg<-c("here","tidyverse","ggplot2","cowplot","ggsidekick","gridExtra","RColorBrewer","salmonIPM")
+pkg<-c("here","tidyverse","ggplot2","cowplot","ggsidekick","gridExtra","RColorBrewer","salmonIPM","viridis")
 if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdiff(pkg,rownames(installed.packages())),dependencies=T)}
 invisible(lapply(pkg,library,character.only=T))
 
@@ -27,6 +27,7 @@ setwd(file.path(out_dir))
 ##========================================## load data and model fit
 ##=================================================================##
 covar_effects<-TRUE ## plot model with or without covariate effects
+covar_dat<-read.csv("IPM_covar_dat_all.csv")
 
 ##=========================================================## IPM fit
 ##----------------------------------------------## without covariates
@@ -377,10 +378,15 @@ p1c <- eta_SS_qs %>%
 ##===============================================## covariate effects
 cov_eff_post<-data.frame(extract1(IPM_fit_with_covars,"beta_SS"))
 apply(cov_eff_post,2,median)
-names(cov_eff_post)<-c("NPGO","SST","Pinks")
+cov_eff_post$Flow<-NA
+names(cov_eff_post)<-c("NPGO","SST","Pinks","Flow")
 ##---------------------------------------------------## effects plots
 p1b <- cov_eff_post %>% 
    pivot_longer(col=everything(),names_to="name",values_to="value") %>%
+   mutate(name=case_when(
+      name!="Flow" ~ name,
+      name=="Flow" ~""
+      )) %>%
    ggplot(aes(x=name,y=value)) +
    # geom_violin(lwd=0.1,col="gray") +
    stat_summary(fun.data=summary_CI90,size=0.25,col="goldenrod1") +
@@ -391,7 +397,7 @@ p1b <- cov_eff_post %>%
    labs(x="",y="Effect size") + 
    theme_sleek() +
    theme(axis.title.x=element_blank(),
-         axis.text.x=element_text(size=12),
+         axis.text.x=element_text(size=12,angle=90,vjust=0.5,hjust=1),
          axis.text.y=element_text(size=12),
          axis.title.y=element_text(size=15)) +
    NULL
@@ -473,7 +479,7 @@ p2c <- eta_R_qs %>%
 ##===============================================## covariate effects
 beta_R_post<-data.frame(extract1(IPM_fit,"beta_R")) ## posterior
 apply(beta_R_post,2,median)
-names(beta_R_post)<-c("NPGO","SST","Pinks")
+names(beta_R_post)<-c("NPGO","SST","Pinks","Flow")
 ## new names
 # cov1<-c("Pink salmon effect estimate")
 # cov2<-c(expression("Summer SST"[arc]*" (°C) effect estimate"))
@@ -492,7 +498,7 @@ p2b <- beta_R_post %>%
    labs(x="",y="Effect size") + 
    theme_sleek() +
    theme(axis.title.x=element_blank(),
-         axis.text.x=element_text(size=12),
+         axis.text.x=element_text(size=12,angle=90,vjust=0.5,hjust=1),
          axis.text.y=element_text(size=12),
          axis.title.y=element_text(size=15)) +
    NULL
@@ -507,9 +513,9 @@ prob_above_zero <- 1-prob_below_zero
 ##=================================================================##
 ##==========## combined recruitment and kelt survival anomaly figures
 ##=================================================================##
-title<-paste0("      Models without covariates                    ",
-             "     Covariate effects                             ",
-             " Models with covariates")
+title<-paste0("          Models without environmental drivers     ",
+             "              Evinonmental effects                   ",
+             "    Models with environmental drivers")
 
 fig<-ggdraw() +
    theme(plot.margin=margin(20,0,0,0)) +
@@ -525,7 +531,78 @@ fig<-ggdraw() +
                    y=c(1,1,1,0.5,0.5,0.5),
                    size=15)
 
-save_plot("IPM-sthd-covariate-effects-recruitment-and-kelt-survival.pdf",fig,ncol=3,nrow=2,base_height=4,base_width=4)
+save_plot("IPM-sthd-covariate-effects-recruitment-and-kelt-survival.pdf",fig,ncol=3,nrow=2,base_height=4,base_width=4.5)
+
+##=================================================================##
+##=========================## anomalies as functions of SST and pinks
+##=================================================================##
+
+##===========================================## kelt survival anomaly
+eta_SS_post<-extract1(IPM_fit_without_covars,"eta_year_SS") ## without
+
+etas_SS_med<-data.frame(anomaly=apply(eta_SS_post,2,median)) %>% 
+   mutate(anomaly=round(100*(exp(anomaly)-1),2)) %>% ## % deviation
+   add_column(year=dat_years_without_covars) %>%
+   mutate(color=factor(ifelse(anomaly>0,"positive","negative")))
+
+pdat_SS<-etas_SS_med %>% 
+   left_join(covar_dat%>%dplyr::select(year,SST,pinks),by="year") %>%
+   filter(!is.na(pinks)) %>%
+   filter(!is.na(SST)) %>%
+   add_column(name="Kelt survival anomaly") %>%
+   dplyr::select(name,anomaly,year,color,SST,Pinks=pinks)
+
+##=============================================## recruitment anomaly
+eta_R_post<-extract1(IPM_fit_without_covars,"eta_year_R") ## without
+
+etas_R_med<-data.frame(anomaly=apply(eta_R_post,2,median)) %>% 
+   mutate(anomaly=round(100*(exp(anomaly)-1),2)) %>% ## % deviation
+   add_column(year=dat_years_without_covars) %>%
+   mutate(color=factor(ifelse(anomaly>0,"positive","negative")))
+
+pdat_R<-etas_R_med %>% 
+   left_join(covar_dat%>%dplyr::select(year,SST_4,pinks_4),by="year")%>%
+   filter(!is.na(pinks_4)) %>%
+   filter(!is.na(SST_4)) %>%
+   add_column(name="Recuitment anomaly") %>%
+   dplyr::select(name,anomaly,year,color,SST=SST_4,Pinks=pinks_4)
+
+##===================================================## combined plot
+pdat<-rbind(pdat_R,pdat_SS) 
+p<-pdat%>% 
+   ggplot(aes(x=SST,y=Pinks,size=abs(anomaly),color=color))+
+   geom_hline(yintercept=mean(pdat$Pinks),linetype="dashed",size=0.2)+
+   geom_vline(xintercept=mean(pdat$SST),linetype="dashed",size=0.2)+
+   annotate("text",x=9.7,y=100,
+            size=2.5,color="black",hjust=0,vjust=0,lineheight=0.9, 
+            label="cold and low competition\nocean environment") +
+   annotate("text",x=12.7,y=820,
+            size=2.5,color="black",hjust=1,vjust=1,lineheight=0.9,
+            label="warm and high competition\nocean environment") +
+   geom_point(alpha=0.75)+
+   geom_point(shape=1,fill=NA,color="black") + 
+   scale_radius(range=c(0.5,9))+
+   scale_color_manual(values=c("red","blue"),
+                      labels=c("negative","positive")) +
+   scale_x_continuous(limits=c(9.7,12.7),breaks=seq(5,15,0.5))+
+   scale_y_continuous(limits=c(100,820),breaks=seq(0,900,100))+
+   theme_classic()+
+   labs(x="SST (°C)",y="Pink salmon abundance (millions)")+
+   labs(size="% deviation",color="")+
+   theme(strip.background=element_blank(),
+         strip.text=element_text(size=14),
+         axis.line=element_line(size=0.1),
+         axis.text=element_text(size=12),
+         axis.title=element_text(size=14),
+         panel.border=element_rect(fill=NA,size=1),
+         legend.key.size=unit(0.5,'cm'),
+         legend.title=element_text(size=10),
+         legend.text=element_text(size=10))+
+   guides(color=guide_legend(order=1,override.aes=list(size=5)),
+          size=guide_legend(order=2)) +
+   facet_wrap(vars(name),ncol=2) +
+   NULL
+ggsave("IPM-sthd-anomalies-vs-covariates.pdf",p,width=8,height=4)
 
 ##=================================================================##
 ##=================================================================##

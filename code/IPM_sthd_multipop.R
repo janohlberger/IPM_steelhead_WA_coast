@@ -28,7 +28,7 @@ fish_dat<-read.csv("IPM_fish_dat_all.csv")
 covar_dat<-read.csv("IPM_covar_dat_all.csv")
 
 ##=========================================================## fit IPM
-covar_effects<-TRUE ## TRUE or FALSE
+covar_effects<-FALSE ## TRUE or FALSE
 SR_mod<-"Ricker" ## SR function (Ricker/BH)
 ##----------------------------------------------------------## priors
 priors<- list(
@@ -44,7 +44,14 @@ if(covar_effects) { ## no NAs in covariates
    fish_dat<-fish_dat %>%
       left_join(covar_dat,by='year') %>%
       na.omit()
-   par_models<-list(s_SS~NPGO+SST+pinks,R~NPGO_2+SST_4+pinks_4)
+   par_models<-list(s_SS~NPGO+SST+pinks,
+                    R~NPGO_2+SST_4+pinks_4+av_CFS_min_1)
+   ## --------------------------## with population-specific flow data
+   # fish_dat<-fish_dat %>%
+   #    left_join(covar_dat,by=c('year','pop')) %>%
+   #    na.omit()
+   # par_models<-list(s_SS~NPGO+SST+pinks,
+   #                  R~NPGO_2+SST_4+pinks_4+av_CFS_min_1)
 } else {
    par_models<-NULL
 }
@@ -76,8 +83,10 @@ print(paste(round(max(rowSums(get_elapsed_time(IPM_fit))/60)),"min"))
 ##----------------------------------------------------## save results
 if(covar_effects) { 
    saveRDS(IPM_fit,"IPM_fit_with_covars.Rdata") 
+   # saveRDS(IPM_fit,"IPM_fit_with_covars_incl_flows.Rdata") 
 }else{ 
    saveRDS(IPM_fit,"IPM_fit_without_covars.Rdata") 
+   
 }
 
 ##=================================================================##
