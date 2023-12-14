@@ -5,7 +5,7 @@
 ##=================================================================##
 
 ##========================================================## packages
-pkg<-c("here","tidyverse","ggplot2","cowplot","ggsidekick","gridExtra","RColorBrewer","salmonIPM","viridis")
+pkg<-c("here","tidyverse","ggplot2","cowplot","ggsidekick","gridExtra","RColorBrewer","salmonIPM","viridis","posterior")
 if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdiff(pkg,rownames(installed.packages())),dependencies=T)}
 invisible(lapply(pkg,library,character.only=T))
 
@@ -72,7 +72,7 @@ summary_CI95<-function(x) { return(data.frame(y=median(x,na.rm=T),ymin=quantile(
 summary_CI90<-function(x) { return(data.frame(y=median(x,na.rm=T),ymin=quantile(x,prob=c(0.05),na.rm=T),ymax=quantile(x,prob=c(0.95),na.rm=T))) }
 summary_CI50<-function(x) { return(data.frame(y=median(x,na.rm=T),ymin=quantile(x,prob=c(0.25),na.rm=T),ymax=quantile(x,prob=c(0.75),na.rm=T))) }
 ##-------------------------------------------------------------## CIs
-probs<-c(0.05,0.25,0.5,0.75,0.95) ## median with 50% and 90% CIs
+probs<-c(0.05,0.25,0.5,0.75,0.95) ## median with 50% and 95% CIs
 
 ##=================================================================##
 ##=======================## observation error, productivity, capacity
@@ -80,7 +80,7 @@ probs<-c(0.05,0.25,0.5,0.75,0.95) ## median with 50% and 90% CIs
 
 ##===============================================## observation error
 tau_post<-extract1(IPM_fit,"tau")
-tau_median<-median(tau_post)
+tau_quants<-quantile(tau_post,prob=probs)
 
 ##============================================## productivity (alpha)
 alphas_post<-data.frame(extract1(IPM_fit,"alpha"))
@@ -102,32 +102,143 @@ mu_Rmax_post<-data.frame(exp(extract1(IPM_fit,"mu_Rmax")))
 names(mu_Rmax_post)<-" mu_Rmax"
 mu_Rmax_qs<-t(apply(mu_Rmax_post,2,function(x) quantile(x,prob=probs)))
 
+##==================================================## results tables
+t1<-t(alpha_qs)%>%
+   rbind(mu_alpha_qs) %>%
+   data.frame() %>%
+   dplyr::select(lower=X5.,median=X50.,upper=X95.) %>%
+   mutate_all(round,2)
+
+write.table(t1,"IPM_table_alpha.csv",row.names=T,sep=",")
+
+t2<-t(Rmax_qs)%>%
+   rbind(mu_Rmax_qs) %>%
+   data.frame() %>%
+   dplyr::select(lower=X5.,median=X50.,upper=X95.) %>%
+   mutate_all(round,0)
+
+write.table(t2,"IPM_table_Rmax.csv",row.names=T,sep=",")
+
+##==================## variation in anomalies explained by predictors
+
+##---------------------------------------## log recruitment anomalies
+
+eta_R_post1<-extract1(IPM_fit_without_covars,"eta_year_R")
+eta_R_1<-t(apply(eta_R_post1,2,function(x)quantile(x,prob=probs)))%>%
+   data.frame() %>% dplyr::select(median_eta_base=X50.) %>%
+   add_column(year=dat_years_without_covars) %>%
+   mutate(year=as.numeric(year))
+
+eta_R_post2<-extract1(IPM_fit_without_covars_with_year,"eta_year_R")
+eta_R_2<-t(apply(eta_R_post2,2,function(x)quantile(x,prob=probs)))%>%
+   data.frame() %>% dplyr::select(median_eta_year=X50.) %>%
+   add_column(year=dat_years_without_covars) %>%
+   mutate(year=as.numeric(year))
+
+eta_R_post3<-extract1(IPM_fit_with_covars,"eta_year_R")
+eta_R_3<-t(apply(eta_R_post3,2,function(x)quantile(x,prob=probs)))%>%
+   data.frame() %>% dplyr::select(median_eta_covars=X50.) %>%
+   add_column(year=dat_years_with_covars) %>%
+   mutate(year=as.numeric(year))
+
+eta_R_post4<-extract1(IPM_fit_with_covars_with_year,"eta_year_R")
+eta_R_4<-t(apply(eta_R_post4,2,function(x)quantile(x,prob=probs)))%>%
+   data.frame() %>% dplyr::select(median_eta_covars_year=X50.) %>%
+   add_column(year=dat_years_with_covars) %>%
+   mutate(year=as.numeric(year))
+
+eta_df<-eta_R_1 %>%
+   left_join(eta_R_2) %>% 
+   left_join(eta_R_3) %>%
+   left_join(eta_R_4) %>%
+   drop_na() %>%
+   data.frame() %>%
+   dplyr::select(-year)
+
+mean_abs_dev<-round(colMeans(apply(eta_df,2,function(x) abs(x))),4)
+mean_abs_dev ## on log scale
+
+##-----------------------------------## logit kelt survival anomalies
+
+eta_SS_post1<-extract1(IPM_fit_without_covars,"eta_year_SS")
+eta_SS_1<-t(apply(eta_SS_post1,2,function(x)quantile(x,prob=probs)))%>%
+   data.frame() %>% dplyr::select(median_eta_base=X50.) %>%
+   add_column(year=dat_years_without_covars) %>%
+   mutate(year=as.numeric(year))
+
+eta_SS_post2<-extract1(IPM_fit_without_covars_with_year,"eta_year_SS")
+eta_SS_2<-t(apply(eta_SS_post2,2,function(x)quantile(x,prob=probs)))%>%
+   data.frame() %>% dplyr::select(median_eta_year=X50.) %>%
+   add_column(year=dat_years_without_covars) %>%
+   mutate(year=as.numeric(year))
+
+eta_SS_post3<-extract1(IPM_fit_with_covars,"eta_year_SS")
+eta_SS_3<-t(apply(eta_SS_post3,2,function(x)quantile(x,prob=probs)))%>%
+   data.frame() %>% dplyr::select(median_eta_covars=X50.) %>%
+   add_column(year=dat_years_with_covars) %>%
+   mutate(year=as.numeric(year))
+
+eta_SS_post4<-extract1(IPM_fit_with_covars_with_year,"eta_year_SS")
+eta_SS_4<-t(apply(eta_SS_post4,2,function(x)quantile(x,prob=probs)))%>%
+   data.frame() %>% dplyr::select(median_eta_covars_year=X50.) %>%
+   add_column(year=dat_years_with_covars) %>%
+   mutate(year=as.numeric(year))
+
+eta_df<-eta_SS_1 %>%
+   left_join(eta_SS_2) %>% 
+   left_join(eta_SS_3) %>%
+   left_join(eta_SS_4) %>%
+   drop_na() %>%
+   data.frame() %>%
+   dplyr::select(-year)
+
+mean_abs_dev<-round(colMeans(apply(eta_df,2,function(x) abs(x))),4)
+mean_abs_dev ## on logic scale
+
 ##=================================================================##
-##============================## spawners, recruitment, kelt survival
+##=================## Figure 2 - spawners, recruitment, kelt survival
 ##=================================================================##
 
 ##==============================================## estimated spawners
 S_post<-extract1(IPM_fit,"S")
+
 S_qs<-t(apply(S_post,2,function(x) quantile(x,prob=probs)))
 S_est_qs<-S_qs %>% data.frame() %>%
-   add_column(fish_dat%>%dplyr::select(pop,year,S_obs)%>%data.frame())
+   add_column(fish_dat%>%dplyr::select(pop,year,S_obs)%>%data_frame()) 
+## posterior predictive distribution of spawners
+quants<-c(0.05,0.5,0.95)
+S_draws<-as_draws_rvars(IPM_fit) %>%
+   mutate_variables(S_ppd=rvar_rng(rlnorm,length(S),log(S),tau))
+S_ppd<-summarise_draws(S_draws$S_ppd,~quantile(.x,probs=quants))
 
-p1 <- S_est_qs %>%
-   # filter(pop=='Humptulips') %>%
+S_all<-S_est_qs %>% add_column(S_ppd)
+
+S_all<-S_all %>% mutate(TF=ifelse(between(S_obs,`5%`,`95%`),T,F)) 
+# S_all<-S_all %>% mutate(TF=ifelse(between(S_obs,`2.5%`,`97.5%`),T,F)) 
+
+pTRUE<-S_all %>% filter(TF==TRUE) %>% nrow() / nrow(S_all) * 100
+
+p1 <- S_all %>%
    ggplot(aes(x=year,y=X50.,color=pop,fill=pop)) +
-   geom_line(aes(y=X50.),lwd=0.5,alpha=1) +
-   geom_point(aes(y=S_obs),size=0.6,alpha=1) +
-   geom_ribbon(aes(ymin=X25.,ymax=X75.),color=NA,alpha=0.4) +
-   geom_ribbon(aes(ymin=X5.,ymax=X95.),color=NA,alpha=0.2) +
+   ## estimated states
+   geom_line(aes(y=X50.),lwd=0.5,alpha=1) + ## median
+   geom_ribbon(aes(ymin=X25.,ymax=X75.),color=NA,alpha=0.4) + ## 50%CI
+   geom_ribbon(aes(ymin=X5.,ymax=X95.),color=NA,alpha=0.2) + ## 90%CI
+   ## posterior predictive distribution
+   geom_line(aes(y=`50%`),lwd=0.75,alpha=1) +
+   geom_ribbon(aes(ymin=`2.5%`,ymax=`97.5%`),fill=NA,lwd=0.1) +
+   #geom_linerange(aes(ymin=`2.5%`,ymax=`97.5%`),lwd=0.1) +
+   ## observations
+   geom_point(aes(y=S_obs),size=0.75,alpha=1) +   
    scale_color_manual(values=colors) +
    scale_fill_manual(values=colors) +
-   labs(x="Brood year",y="Spawner abundance") + 
+   labs(x="Spawning year",y="Spawner abundance") + 
    scale_y_continuous(limits=c(0,NA)) +
    facet_wrap(vars(pop),ncol=nP,scales="free_y") + ## ,scales="free_x"
    theme_sleek() +
    theme(legend.position="none") +
    theme(
-      axis.text.x=element_text(angle=90,vjust=0.5,hjust=1),
+      # axis.text.x=element_text(angle=90,vjust=0.5,hjust=1),
       panel.grid.minor=element_blank(),
       panel.grid.major.y=element_blank(),
       strip.background=element_rect(fill=NA),
@@ -150,13 +261,13 @@ p2 <- R_est_qs %>%
    geom_ribbon(aes(ymin=X5.,ymax=X95.),color=NA,alpha=0.2) +
    scale_color_manual(values=colors) +
    scale_fill_manual(values=colors) +
-   labs(x="Brood year",y="Recruitment") + 
+   labs(x="Spawning year",y="Recruitment") + 
    scale_y_continuous(limits=c(0,NA)) +
    facet_wrap(vars(pop),ncol=nP,scales="free_y") +  # scales="free_x"
    theme_sleek() +
    theme(legend.position="none") +
    theme(
-      axis.text.x=element_text(angle=90,vjust=0.5,hjust=1),
+      # axis.text.x=element_text(angle=90,vjust=0.5,hjust=1),
       panel.grid.minor=element_blank(),
       panel.grid.major.y=element_blank(),
       strip.background=element_rect(fill=NA),
@@ -230,18 +341,18 @@ p3 <- RpS_plot  %>%
    ## estimated recruits per spawner median, 50%, and 90% CIs
    geom_line(aes(y=RpS_50.),lwd=0.5,alpha=1) +
    geom_ribbon(aes(ymin=RpS_25.,ymax=RpS_75.),color=NA,alpha=0.4) +
-   geom_ribbon(aes(ymin=RpS_5.,ymax=RpS_95.),color=NA,alpha=0.2) +
+   geom_ribbon(aes(ymin=RpS_2.5.,ymax=RpS_95.),color=NA,alpha=0.2) +
    ## estimated recruits per spawner at equilibrium
    geom_line(aes(y=RpS_eq),lwd=0.5,alpha=0.5) +
    scale_color_manual(values=colors) +
    scale_fill_manual(values=colors) +
-   labs(x="Brood year",y="Recruits/spawner") + 
+   labs(x="Spawning year",y="Recruits/spawner") + 
    scale_y_continuous(limits=c(0,NA)) + ## ,expand=c(0,0)
    facet_wrap(vars(pop),ncol=nP,scales="free_y") + #scales="free_y") +
    theme_sleek() +
    theme(legend.position="none") +
    theme(
-      axis.text.x=element_text(angle=90,vjust=0.5,hjust=1),
+      # axis.text.x=element_text(angle=90,vjust=0.5,hjust=1),
       panel.grid.minor=element_blank(),
       panel.grid.major.y=element_blank(),
       strip.background=element_rect(fill=NA),
@@ -294,7 +405,7 @@ p4 <- surv_qs %>%
    theme_sleek() +
    theme(legend.position="none") +
    theme(
-      axis.text.x=element_text(angle=90,vjust=0.5,hjust=1),
+      # axis.text.x=element_text(angle=90,vjust=0.5,hjust=1),
       panel.grid.minor=element_blank(),
       panel.grid.major.y=element_blank(),
       strip.background=element_rect(fill=NA),
@@ -317,6 +428,11 @@ ggsave("IPM-sthd-spawner-recruit-kelt.pdf",pp,width=1+2*nP,height=7.5)
 eta_SS_post<-extract1(IPM_fit_without_covars,"eta_year_SS")
 eta_SS_qs<-t(apply(eta_SS_post,2,function(x) quantile(x,prob=probs)))
 eta_SS_qs<-eta_SS_qs %>% data.frame() %>% add_column(year=dat_years_without_covars)
+
+sigma_SS_post<-extract1(IPM_fit_without_covars,"sigma_SS")
+sigma_SS_without_covars<-quantile(sigma_SS_post,prob=probs)
+sigma_year_SS_post<-extract1(IPM_fit_without_covars,"sigma_year_SS")
+sigma_year_SS_without_covars<-quantile(sigma_year_SS_post,prob=probs)
 
 ##----------------------------------------## estimate trend over time
 etas_SS<-data.frame(median=apply(eta_SS_post,2,median),sd=apply(eta_SS_post,2,sd)) %>% add_column(year=dat_years_without_covars)
@@ -349,6 +465,15 @@ eta_SS_post<-extract1(IPM_fit_with_covars,"eta_year_SS")
 eta_SS_qs<-t(apply(eta_SS_post,2,function(x) quantile(x,prob=probs)))
 eta_SS_qs<-eta_SS_qs %>% data.frame() %>% add_column(year=dat_years_with_covars)
 
+sigma_SS_post<-extract1(IPM_fit_with_covars,"sigma_SS")
+sigma_SS_with_covars<-quantile(sigma_SS_post,prob=probs)
+sigma_year_SS_post<-extract1(IPM_fit_with_covars,"sigma_year_SS")
+sigma_year_SS_with_covars<-quantile(sigma_year_SS_post,prob=probs)
+
+## spatial synchony among populations (Thorson et al. 2013)
+synchony_post<-sigma_SS_post^2/(sigma_SS_post^2+sigma_year_SS_post^2) 
+synchony_SS_qs<-quantile(synchony_post,prob=probs)
+
 ##----------------------------------------## estimate trend over time
 etas_SS<-data.frame(median=apply(eta_SS_post,2,median),sd=apply(eta_SS_post,2,sd)) %>% add_column(year=dat_years_with_covars)
 newdata<-data.frame(year=dat_years_with_covars)
@@ -360,8 +485,8 @@ pred<-data.frame(pred) %>% add_column(year=etas_SS$year)
 p1c <- eta_SS_qs %>%
    ggplot(aes(x=year,y=X50.)) +
    geom_line(lwd=0.4,alpha=1) +
-   geom_ribbon(aes(ymin=X25.,ymax=X75.),fill="goldenrod1",color="darkgray",alpha=0.3,lwd=0.2) +
-   geom_ribbon(aes(ymin=X5.,ymax=X95.),fill="goldenrod1",color="darkgray",alpha=0.1,lwd=0.2) +
+   geom_ribbon(aes(ymin=X25.,ymax=X75.),fill="goldenrod1",color=NA,alpha=0.3,lwd=0.2) +
+   geom_ribbon(aes(ymin=X5.,ymax=X95.),fill="goldenrod1",color=NA,alpha=0.1,lwd=0.2) +
    labs(x="Year",y="Kelt survival anomaly") + 
    scale_y_continuous(limits=c(-1,1)) +
    ## add weighted linear fit based on median recruitment residuals
@@ -417,6 +542,11 @@ eta_R_post<-extract1(IPM_fit_without_covars,"eta_year_R")
 eta_R_qsr<-t(apply(eta_R_post,2,function(x) quantile(x,prob=probs)))
 eta_R_qs<-data.frame(eta_R_qsr) %>% add_column(year=dat_years_without_covars)
 
+sigma_R_post<-extract1(IPM_fit_without_covars,"sigma_R")
+sigma_R_without_covars<-quantile(sigma_R_post,prob=probs)
+sigma_year_R_post<-extract1(IPM_fit_without_covars,"sigma_year_R")
+sigma_year_R_without_covars<-quantile(sigma_year_R_post,prob=probs)
+
 ##----------------------------------------## estimate trend over time
 etas_R<-data.frame(median=apply(eta_R_post,2,median),sd=apply(eta_R_post,2,sd)) %>% add_column(year=dat_years_without_covars)
 newdata<-data.frame(year=dat_years_without_covars)
@@ -431,7 +561,7 @@ p2a <- eta_R_qs %>%
    geom_line(lwd=0.4,alpha=1) +
    geom_ribbon(aes(ymin=X25.,ymax=X75.),color=NA,alpha=0.3) +
    geom_ribbon(aes(ymin=X5.,ymax=X95.),color=NA,alpha=0.1) +
-   labs(x="Brood year",y="Recruitment anomaly") + 
+   labs(x="Spawning year",y="Recruitment anomaly") + 
    scale_y_continuous(limits=c(-1,0.7)) +
    ## add weighted linear fit based on median recruitment residuals
    geom_line(data=pred,aes(y=fit),lwd=0.2,linetype="dashed") +
@@ -449,6 +579,15 @@ eta_R_post<-extract1(IPM_fit_with_covars,"eta_year_R")
 eta_R_qsr<-t(apply(eta_R_post,2,function(x) quantile(x,prob=probs)))
 eta_R_qs<-data.frame(eta_R_qsr) %>% add_column(year=dat_years_with_covars)
 
+sigma_R_post<-extract1(IPM_fit_with_covars,"sigma_R")
+sigma_R_with_covars<-quantile(sigma_R_post,prob=probs)
+sigma_year_R_post<-extract1(IPM_fit_with_covars,"sigma_year_R")
+sigma_year_R_with_covars<-quantile(sigma_year_R_post,prob=probs)
+
+## spatial synchrony among populations (Thorson et al. 2013)
+synchrony_post<-sigma_R_post^2/(sigma_R_post^2+sigma_year_R_post^2) 
+synchrony_qs<-quantile(temp_corr_pops,prob=probs)
+
 ##----------------------------------------## estimate trend over time
 etas_R<-data.frame(median=apply(eta_R_post,2,median),sd=apply(eta_R_post,2,sd)) %>% add_column(year=dat_years_with_covars)
 newdata<-data.frame(year=dat_years_with_covars)
@@ -461,9 +600,9 @@ p2c <- eta_R_qs %>%
    ## plot median recruitment residuals and 95% CIs
    ggplot(aes(x=year,y=X50.)) +
    geom_line(lwd=0.4,alpha=1) +
-   geom_ribbon(aes(ymin=X25.,ymax=X75.),fill="goldenrod1",color="darkgray",alpha=0.3,lwd=0.1) +
-   geom_ribbon(aes(ymin=X5.,ymax=X95.),fill="goldenrod1",color="darkgray",alpha=0.1,lwd=0.1) +
-   labs(x="Brood year",y="Recruitment anomaly") + 
+   geom_ribbon(aes(ymin=X25.,ymax=X75.),fill="goldenrod1",color=NA,alpha=0.3,lwd=0.1) +
+   geom_ribbon(aes(ymin=X5.,ymax=X95.),fill="goldenrod1",color=NA,alpha=0.1,lwd=0.1) +
+   labs(x="Spawning year",y="Recruitment anomaly") + 
    scale_y_continuous(limits=c(-1,0.7)) +
    ## add weighted linear fit based on median recruitment residuals
    geom_line(data=pred,aes(y=fit),lwd=0.2,linetype="dashed") +
@@ -511,10 +650,10 @@ prob_below_zero<-apply(beta_df,1,my_pnorm)
 prob_above_zero <- 1-prob_below_zero
 
 ##=================================================================##
-##==========## combined recruitment and kelt survival anomaly figures
+##========## Figure 3 - recruitment and kelt survival anomaly figures
 ##=================================================================##
 title<-paste0("          Models without environmental drivers     ",
-             "              Evinonmental effects                   ",
+             "              Environmental effects                   ",
              "    Models with environmental drivers")
 
 fig<-ggdraw() +
@@ -534,14 +673,14 @@ fig<-ggdraw() +
 save_plot("IPM-sthd-covariate-effects-recruitment-and-kelt-survival.pdf",fig,ncol=3,nrow=2,base_height=4,base_width=4.5)
 
 ##=================================================================##
-##=========================## anomalies as functions of SST and pinks
+##==============## Figure 4 - anomalies as functions of SST and pinks
 ##=================================================================##
 
 ##===========================================## kelt survival anomaly
 eta_SS_post<-extract1(IPM_fit_without_covars,"eta_year_SS") ## without
 
 etas_SS_med<-data.frame(anomaly=apply(eta_SS_post,2,median)) %>% 
-   mutate(anomaly=round(100*(exp(anomaly)-1),2)) %>% ## % deviation
+   # mutate(anomaly=round(100*(exp(anomaly)-1),2)) %>% ## % deviation
    add_column(year=dat_years_without_covars) %>%
    mutate(color=factor(ifelse(anomaly>0,"positive","negative")))
 
@@ -556,7 +695,7 @@ pdat_SS<-etas_SS_med %>%
 eta_R_post<-extract1(IPM_fit_without_covars,"eta_year_R") ## without
 
 etas_R_med<-data.frame(anomaly=apply(eta_R_post,2,median)) %>% 
-   mutate(anomaly=round(100*(exp(anomaly)-1),2)) %>% ## % deviation
+   # mutate(anomaly=round(100*(exp(anomaly)-1),2)) %>% ## % deviation
    add_column(year=dat_years_without_covars) %>%
    mutate(color=factor(ifelse(anomaly>0,"positive","negative")))
 
@@ -571,8 +710,8 @@ pdat_R<-etas_R_med %>%
 pdat<-rbind(pdat_R,pdat_SS) 
 p<-pdat%>% 
    ggplot(aes(x=SST,y=Pinks,size=abs(anomaly),color=color))+
-   geom_hline(yintercept=mean(pdat$Pinks),linetype="dashed",size=0.2)+
-   geom_vline(xintercept=mean(pdat$SST),linetype="dashed",size=0.2)+
+   geom_hline(yintercept=mean(pdat$Pinks),linetype="dashed",linewidth=0.2)+
+   geom_vline(xintercept=mean(pdat$SST),linetype="dashed",linewidth=0.2)+
    annotate("text",x=9.7,y=100,
             size=2.5,color="black",hjust=0,vjust=0,lineheight=0.9, 
             label="cold and low competition\nocean environment") +
@@ -588,7 +727,8 @@ p<-pdat%>%
    scale_y_continuous(limits=c(100,820),breaks=seq(0,900,100))+
    theme_classic()+
    labs(x="SST (°C)",y="Pink salmon abundance (millions)")+
-   labs(size="% deviation",color="")+
+   labs(size="anomaly",color="")+
+   # labs(size="% deviation",color="")+
    theme(strip.background=element_blank(),
          strip.text=element_text(size=14),
          axis.line=element_line(size=0.1),
@@ -600,10 +740,11 @@ p<-pdat%>%
          legend.text=element_text(size=10))+
    guides(color=guide_legend(order=1,override.aes=list(size=5)),
           size=guide_legend(order=2)) +
-   facet_wrap(vars(name),ncol=2) +
+   # facet_wrap(vars(name),ncol=2) +
+   facet_wrap(vars(factor(name,c("Recuitment anomaly","Kelt survival anomaly"))),ncol=2) +
    NULL
 ggsave("IPM-sthd-anomalies-vs-covariates.pdf",p,width=8,height=4)
-
+       
 ##=================================================================##
 ##=================================================================##
 ##=================================================================##
