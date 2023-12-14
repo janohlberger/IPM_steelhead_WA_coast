@@ -155,9 +155,6 @@ eta_df<-eta_R_1 %>%
    data.frame() %>%
    dplyr::select(-year)
 
-mean_abs_dev<-round(colMeans(apply(eta_df,2,function(x) abs(x))),4)
-mean_abs_dev ## on log scale
-
 ##-----------------------------------## logit kelt survival anomalies
 
 eta_SS_post1<-extract1(IPM_fit_without_covars,"eta_year_SS")
@@ -192,9 +189,6 @@ eta_df<-eta_SS_1 %>%
    data.frame() %>%
    dplyr::select(-year)
 
-mean_abs_dev<-round(colMeans(apply(eta_df,2,function(x) abs(x))),4)
-mean_abs_dev ## on logic scale
-
 ##=================================================================##
 ##=================## Figure 2 - spawners, recruitment, kelt survival
 ##=================================================================##
@@ -222,11 +216,11 @@ p1 <- S_all %>%
    ggplot(aes(x=year,y=X50.,color=pop,fill=pop)) +
    ## estimated states
    geom_line(aes(y=X50.),lwd=0.5,alpha=1) + ## median
-   geom_ribbon(aes(ymin=X25.,ymax=X75.),color=NA,alpha=0.4) + ## 50%CI
-   geom_ribbon(aes(ymin=X5.,ymax=X95.),color=NA,alpha=0.2) + ## 90%CI
+   # geom_ribbon(aes(ymin=X25.,ymax=X75.),color=NA,alpha=0.4) + ## 50%CI
+   geom_ribbon(aes(ymin=X5.,ymax=X95.),color=NA,alpha=0.4) + ## 90%CI
    ## posterior predictive distribution
-   geom_line(aes(y=`50%`),lwd=0.75,alpha=1) +
-   geom_ribbon(aes(ymin=`2.5%`,ymax=`97.5%`),fill=NA,lwd=0.1) +
+   # geom_line(aes(y=`50%`),lwd=0.75,alpha=1) +
+   geom_ribbon(aes(ymin=`5%`,ymax=`95%`),color=NA,alpha=0.2,lwd=0.1) +
    #geom_linerange(aes(ymin=`2.5%`,ymax=`97.5%`),lwd=0.1) +
    ## observations
    geom_point(aes(y=S_obs),size=0.75,alpha=1) +   
@@ -257,8 +251,8 @@ R_est_qs<-R_qs %>%
 p2 <- R_est_qs %>%
    ggplot(aes(x=year,y=X50.,color=pop,fill=pop)) +
    geom_line(aes(y=X50.),lwd=0.5,alpha=1) +
-   geom_ribbon(aes(ymin=X25.,ymax=X75.),color=NA,alpha=0.4) +
-   geom_ribbon(aes(ymin=X5.,ymax=X95.),color=NA,alpha=0.2) +
+   # geom_ribbon(aes(ymin=X25.,ymax=X75.),color=NA,alpha=0.4) +
+   geom_ribbon(aes(ymin=X5.,ymax=X95.),color=NA,alpha=0.4) +
    scale_color_manual(values=colors) +
    scale_fill_manual(values=colors) +
    labs(x="Spawning year",y="Recruitment") + 
@@ -395,8 +389,8 @@ surv_med_recent_mean<-surv_med %>%
 p4 <- surv_qs %>%
    ggplot(aes(x=year,y=X50.,color=pop,fill=pop)) +
    geom_line(aes(y=X50.),lwd=0.5,alpha=1) +
-   geom_ribbon(aes(ymin=X25.,ymax=X75.),color=NA,alpha=0.4) +
-   geom_ribbon(aes(ymin=X5.,ymax=X95.),color=NA,alpha=0.2) +
+   # geom_ribbon(aes(ymin=X25.,ymax=X75.),color=NA,alpha=0.4) +
+   geom_ribbon(aes(ymin=X5.,ymax=X95.),color=NA,alpha=0.4) +
    scale_color_manual(values=colors) +
    scale_fill_manual(values=colors) +
    # scale_x_continuous(limits=c(1978,2022)) +
@@ -445,10 +439,10 @@ pred<-data.frame(pred) %>% add_column(year=etas_SS$year)
 p1a <- eta_SS_qs %>%
    ggplot(aes(x=year,y=X50.)) +
    geom_line(lwd=0.4,alpha=1) +
-   geom_ribbon(aes(ymin=X25.,ymax=X75.),color=NA,alpha=0.3) +
-   geom_ribbon(aes(ymin=X5.,ymax=X95.),color=NA,alpha=0.1) +
+   # geom_ribbon(aes(ymin=X25.,ymax=X75.),color=NA,alpha=0.3) +
+   geom_ribbon(aes(ymin=X5.,ymax=X95.),color=NA,alpha=0.2) +
    labs(x="Year",y="Kelt survival anomaly") + 
-   scale_y_continuous(limits=c(-1,1)) +
+   scale_y_continuous(limits=c(-1.1,1.1),expand=c(0,0)) +
    ## add weighted linear fit based on median recruitment residuals
    geom_line(data=pred,aes(y=fit),lwd=0.2,linetype="dashed") +
    #geom_line(data=pred,aes(y=lwr),lwd=0.2,color="darkgray",alpha=1) +
@@ -485,10 +479,10 @@ pred<-data.frame(pred) %>% add_column(year=etas_SS$year)
 p1c <- eta_SS_qs %>%
    ggplot(aes(x=year,y=X50.)) +
    geom_line(lwd=0.4,alpha=1) +
-   geom_ribbon(aes(ymin=X25.,ymax=X75.),fill="goldenrod1",color=NA,alpha=0.3,lwd=0.2) +
-   geom_ribbon(aes(ymin=X5.,ymax=X95.),fill="goldenrod1",color=NA,alpha=0.1,lwd=0.2) +
+   # geom_ribbon(aes(ymin=X25.,ymax=X75.),fill="goldenrod1",color=NA,alpha=0.3,lwd=0.2) +
+   geom_ribbon(aes(ymin=X5.,ymax=X95.),fill="goldenrod1",color=NA,alpha=0.3,lwd=0.2) +
    labs(x="Year",y="Kelt survival anomaly") + 
-   scale_y_continuous(limits=c(-1,1)) +
+   scale_y_continuous(limits=c(-1.1,1.1),expand=c(0,0)) +
    ## add weighted linear fit based on median recruitment residuals
    geom_line(data=pred,aes(y=fit),lwd=0.2,linetype="dashed") +
    #geom_line(data=pred,aes(y=lwr),lwd=0.2,color="darkgray",alpha=1) +
@@ -559,10 +553,10 @@ p2a <- eta_R_qs %>%
    ## plot median recruitment residuals and 95% CIs
    ggplot(aes(x=year,y=X50.)) +
    geom_line(lwd=0.4,alpha=1) +
-   geom_ribbon(aes(ymin=X25.,ymax=X75.),color=NA,alpha=0.3) +
-   geom_ribbon(aes(ymin=X5.,ymax=X95.),color=NA,alpha=0.1) +
+   # geom_ribbon(aes(ymin=X25.,ymax=X75.),color=NA,alpha=0.3) +
+   geom_ribbon(aes(ymin=X5.,ymax=X95.),color=NA,alpha=0.2) +
    labs(x="Spawning year",y="Recruitment anomaly") + 
-   scale_y_continuous(limits=c(-1,0.7)) +
+   scale_y_continuous(limits=c(-0.99,0.7),expand=c(0,0)) +
    ## add weighted linear fit based on median recruitment residuals
    geom_line(data=pred,aes(y=fit),lwd=0.2,linetype="dashed") +
    #geom_line(data=pred,aes(y=lwr),lwd=0.2,color="darkgray",alpha=1) +
@@ -596,10 +590,10 @@ p2c <- eta_R_qs %>%
    ## plot median recruitment residuals and 95% CIs
    ggplot(aes(x=year,y=X50.)) +
    geom_line(lwd=0.4,alpha=1) +
-   geom_ribbon(aes(ymin=X25.,ymax=X75.),fill="goldenrod1",color=NA,alpha=0.3,lwd=0.1) +
-   geom_ribbon(aes(ymin=X5.,ymax=X95.),fill="goldenrod1",color=NA,alpha=0.1,lwd=0.1) +
+   # geom_ribbon(aes(ymin=X25.,ymax=X75.),fill="goldenrod1",color=NA,alpha=0.3,lwd=0.1) +
+   geom_ribbon(aes(ymin=X5.,ymax=X95.),fill="goldenrod1",color=NA,alpha=0.3,lwd=0.1) +
    labs(x="Spawning year",y="Recruitment anomaly") + 
-   scale_y_continuous(limits=c(-1,0.7)) +
+   scale_y_continuous(limits=c(-0.99,0.7),expand=c(0,0)) +
    ## add weighted linear fit based on median recruitment residuals
    geom_line(data=pred,aes(y=fit),lwd=0.2,linetype="dashed") +
    #geom_line(data=pred,aes(y=lwr),lwd=0.2,color="darkgray",alpha=1) +
@@ -666,7 +660,7 @@ fig<-ggdraw() +
                    y=c(1,1,1,0.5,0.5,0.5),
                    size=15)
 
-save_plot("IPM-sthd-covariate-effects-recruitment-and-kelt-survival.pdf",fig,ncol=3,nrow=2,base_height=4,base_width=4.5)
+save_plot("IPM-sthd-covariate-effects-recruitment-and-kelt-survival.pdf",fig,ncol=3,nrow=2,base_height=4.5,base_width=4.5)
 
 ##=================================================================##
 ##==============## Figure 4 - anomalies as functions of SST and pinks
