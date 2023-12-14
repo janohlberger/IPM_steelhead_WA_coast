@@ -76,9 +76,6 @@ mod_sel<-get.models(mod_select,subset=1)[[1]] ## lowest AICc
 summary(mod_sel) 
 ncovar<-dim(summary(mod_sel)$coefficients)[1]-1
 par(mfcol=c(1,ncovar),mar=c(4,4,1,1));visreg(mod_sel)
-##-----------------------------------------------## added year effect
-mod_sel_year<-update(mod_sel,.~.+year)
-data.frame(summary(mod_sel_year)$coefficients)[ncovar+2,]
 
 ##==================================================## selected model
 mod_rec<-mod_sel
@@ -177,10 +174,6 @@ mod_sel<-get.models(mod_select,subset=1)[[1]] ## lowest AICc
 summary(mod_sel)
 ncovar<-dim(summary(mod_sel)$coefficients)[1]-1
 par(mfcol=c(1,ncovar),mar=c(4,4,1,1));visreg(mod_sel)
-##-----------------------------------------------## added year effect
-mod_sel_year<-update(mod_sel,.~.+year)
-summary(mod_sel_year)$adj.r.squared 
-data.frame(summary(mod_sel_year)$coefficients)[ncovar+2,]
 
 ##==================================================## selected model
 mod_surv<-mod_sel

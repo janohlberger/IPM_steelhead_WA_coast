@@ -584,10 +584,6 @@ sigma_R_with_covars<-quantile(sigma_R_post,prob=probs)
 sigma_year_R_post<-extract1(IPM_fit_with_covars,"sigma_year_R")
 sigma_year_R_with_covars<-quantile(sigma_year_R_post,prob=probs)
 
-## spatial synchrony among populations (Thorson et al. 2013)
-synchrony_post<-sigma_R_post^2/(sigma_R_post^2+sigma_year_R_post^2) 
-synchrony_qs<-quantile(temp_corr_pops,prob=probs)
-
 ##----------------------------------------## estimate trend over time
 etas_R<-data.frame(median=apply(eta_R_post,2,median),sd=apply(eta_R_post,2,sd)) %>% add_column(year=dat_years_with_covars)
 newdata<-data.frame(year=dat_years_with_covars)
