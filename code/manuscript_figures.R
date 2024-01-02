@@ -21,7 +21,7 @@ setwd(file.path(out_dir))
 ##=================================================================##
 covar_dat<-read.csv(paste0(home,"/data/IPM_covar_dat_all.csv"))
 
-##=========================================================## IPM fit
+##========================================================## IPM fits
 ##----------------------------------------------## without covariates
 file1<-"IPM_fit_without_covars.Rdata"
 IPM_fit_without_covars<-readRDS(paste0(home,"/output/",file1))
@@ -66,77 +66,6 @@ probs<-c(0.05,0.25,0.5,0.75,0.95) ## median with 50% and 95% CIs
 ##===============================================## observation error
 tau_post<-extract1(IPM_fit,"tau")
 tau_quants<-quantile(tau_post,prob=probs)
-
-
-##==================## variation in anomalies explained by predictors
-
-##---------------------------------------## log recruitment anomalies
-# 
-# eta_R_post1<-extract1(IPM_fit_without_covars,"eta_year_R")
-# eta_R_1<-t(apply(eta_R_post1,2,function(x)quantile(x,prob=probs)))%>%
-#    data.frame() %>% dplyr::select(median_eta_base=X50.) %>%
-#    add_column(year=dat_years_without_covars) %>%
-#    mutate(year=as.numeric(year))
-# 
-# eta_R_post2<-extract1(IPM_fit_without_covars_with_year,"eta_year_R")
-# eta_R_2<-t(apply(eta_R_post2,2,function(x)quantile(x,prob=probs)))%>%
-#    data.frame() %>% dplyr::select(median_eta_year=X50.) %>%
-#    add_column(year=dat_years_without_covars) %>%
-#    mutate(year=as.numeric(year))
-# 
-# eta_R_post3<-extract1(IPM_fit_with_covars,"eta_year_R")
-# eta_R_3<-t(apply(eta_R_post3,2,function(x)quantile(x,prob=probs)))%>%
-#    data.frame() %>% dplyr::select(median_eta_covars=X50.) %>%
-#    add_column(year=dat_years_with_covars) %>%
-#    mutate(year=as.numeric(year))
-# 
-# eta_R_post4<-extract1(IPM_fit_with_covars_with_year,"eta_year_R")
-# eta_R_4<-t(apply(eta_R_post4,2,function(x)quantile(x,prob=probs)))%>%
-#    data.frame() %>% dplyr::select(median_eta_covars_year=X50.) %>%
-#    add_column(year=dat_years_with_covars) %>%
-#    mutate(year=as.numeric(year))
-# 
-# eta_df<-eta_R_1 %>%
-#    left_join(eta_R_2) %>% 
-#    left_join(eta_R_3) %>%
-#    left_join(eta_R_4) %>%
-#    drop_na() %>%
-#    data.frame() %>%
-#    dplyr::select(-year)
-
-##-----------------------------------## logit kelt survival anomalies
-
-# eta_SS_post1<-extract1(IPM_fit_without_covars,"eta_year_SS")
-# eta_SS_1<-t(apply(eta_SS_post1,2,function(x)quantile(x,prob=probs)))%>%
-#    data.frame() %>% dplyr::select(median_eta_base=X50.) %>%
-#    add_column(year=dat_years_without_covars) %>%
-#    mutate(year=as.numeric(year))
-# 
-# eta_SS_post2<-extract1(IPM_fit_without_covars_with_year,"eta_year_SS")
-# eta_SS_2<-t(apply(eta_SS_post2,2,function(x)quantile(x,prob=probs)))%>%
-#    data.frame() %>% dplyr::select(median_eta_year=X50.) %>%
-#    add_column(year=dat_years_without_covars) %>%
-#    mutate(year=as.numeric(year))
-# 
-# eta_SS_post3<-extract1(IPM_fit_with_covars,"eta_year_SS")
-# eta_SS_3<-t(apply(eta_SS_post3,2,function(x)quantile(x,prob=probs)))%>%
-#    data.frame() %>% dplyr::select(median_eta_covars=X50.) %>%
-#    add_column(year=dat_years_with_covars) %>%
-#    mutate(year=as.numeric(year))
-# 
-# eta_SS_post4<-extract1(IPM_fit_with_covars_with_year,"eta_year_SS")
-# eta_SS_4<-t(apply(eta_SS_post4,2,function(x)quantile(x,prob=probs)))%>%
-#    data.frame() %>% dplyr::select(median_eta_covars_year=X50.) %>%
-#    add_column(year=dat_years_with_covars) %>%
-#    mutate(year=as.numeric(year))
-# 
-# eta_df<-eta_SS_1 %>%
-#    left_join(eta_SS_2) %>% 
-#    left_join(eta_SS_3) %>%
-#    left_join(eta_SS_4) %>%
-#    drop_na() %>%
-#    data.frame() %>%
-#    dplyr::select(-year)
 
 ##=================================================================##
 ##=================## Figure 2 - spawners, recruitment, kelt survival
