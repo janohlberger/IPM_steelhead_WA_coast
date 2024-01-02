@@ -5,7 +5,7 @@
 ##=================================================================##
 
 ##========================================================## packages
-pkg<-c("here","tidyverse","MuMIn","relaimpo","visreg","salmonIPM")
+pkg<-c("here","tidyverse","MuMIn","relaimpo","visreg","Hmisc", "salmonIPM")
 if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdiff(pkg,rownames(installed.packages())),dependencies=T)}
 invisible(lapply(pkg,library,character.only=T))
 home<-here::here()
