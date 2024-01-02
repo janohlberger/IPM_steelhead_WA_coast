@@ -19,7 +19,7 @@ setwd(file.path(out_dir))
 ##=================================================================##
 ##=======================================================## fish data
 ##=================================================================##
-file_dir<-age_dir<-paste0(home,"/data/RiverFiles")
+file_dir<-age_dir<-paste0(home,"/data/fish_data")
 pops<-c("Chehalis","Hoh","Humptulips","Queets","Quillayute","Quinault")
 areas<-c(1965,242,224,332,658,253)
 write.csv(areas,"IPM_habitat_areas.csv",row.names=F)
