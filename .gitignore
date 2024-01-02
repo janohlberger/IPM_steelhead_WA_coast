@@ -6,6 +6,9 @@ code/data_plots.R
 code/other_figures.R
 code/create_SST_grid.R
 code/data_river_flows.R
-data
+data/covariates
+data/old_flow_data
+data/RiverFiles
+data/SST_grid
 output
 map
