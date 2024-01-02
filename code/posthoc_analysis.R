@@ -1,6 +1,6 @@
 ##=================================================================##
 ##                                                                 ##
-##  Post-hoc analysis of recruitment and kelt survival anomalies   ##
+## Run posthoc analysis of recruitment and kelt survival anomalies ##
 ##                                                                 ##
 ##=================================================================##
 
@@ -99,8 +99,10 @@ v2<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"SST")]))
 v3<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"NPGO")]))
 v4<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"CFS")]))
 relimp_df<-data.frame(pinks=v1,sst=v2,npgo=v3,flow=v4)
-round(relimp_df*100,2) ## % of response variance explained by variable
+relimp_df<-round(relimp_df*100,2) ## % of response variance explained
 round(sum(relimp_df),2) ## total % of response variance explained
+
+write.csv(relimp_df,"percent_recruit_var_expl_posthoc.csv")
 
 ##=================================================## partial effects
 pdf("IPM-sthd-recruitment-anamaly-covariates-effects.pdf",width=4*nterms,height=4)
@@ -110,7 +112,7 @@ xlab<-c("NPGO","Pink salmon abundance (millions)","Summer SST (°C)","Summer low
 xtrans<-function(x) { x*df_sds[names(df_sds)==covar]+df_means[names(df_means)==covar] }
 for(i in 1:length(mod_terms)) {
    covar<-mod_terms[i]
-   visreg(mod,xvar=covar,xlab=xlab[i],partial=T,ylab="Partial effect on recruitment anomaly",scale="response",xtrans=xtrans,points.par=list(cex=1,pch=16,col=1),fill.par=list(col=alpha(1,0.1)),line.par=list(col=1))
+   visreg(mod_rec,xvar=covar,xlab=xlab[i],partial=T,ylab="Partial effect on recruitment anomaly",scale="response",xtrans=xtrans,points.par=list(cex=1,pch=16,col=1),fill.par=list(col=alpha(1,0.1)),line.par=list(col=1))
 }
 dev.off()
 
@@ -198,8 +200,10 @@ v1<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"pinks")]))
 v2<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"SST")]))
 v3<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"NPGO")]))
 relimp_df<-data.frame(pinks=v1,sst=v2,npgo=v3)
-round(relimp_df*100,2) ## % of response variance explained by variable
+relimp_df<-round(relimp_df*100,2) ## % of response variance explained
 round(sum(relimp_df),2) ## total % of response variance explained
+
+write.csv(relimp_df,"percent_keltsurv_var_expl_posthoc.csv")
 
 ##=================================================## partial effects
 pdf("IPM-sthd-kelt-survival-anomaly-covariate-effects.pdf",width=4*nterms,height=4)

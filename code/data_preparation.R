@@ -9,7 +9,7 @@ pkg<-c("here","tidyverse","readr","readxl","dataRetrieval","lubridate")
 if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdiff(pkg,rownames(installed.packages())),dependencies=T)}
 invisible(lapply(pkg,library,character.only=T))
 home<-here::here()
-source(paste0(home,"/functions/data_prep.R"))
+source(paste0(home,"/code/data_prep.R"))
 
 ##================================================## output directory
 out_dir<-paste0(home,"/output/")
@@ -19,55 +19,31 @@ setwd(file.path(out_dir))
 ##=================================================================##
 ##=======================================================## fish data
 ##=================================================================##
-spatial_extent<-"northcoast" ## 'OP',"coastal", "northcoast"
-cdata_type<-"rate" ## 'count' or 'rate'
-##=======================================================## load data
 file_dir<-age_dir<-paste0(home,"/data/RiverFiles")
-##--------------------------------------------------------------## OP
-if(spatial_extent=="OP"){
-pops<-c("Hoh","Queets","Quillayute","Quinault") ## OP (alphabetical)
-# skm<-c(10431,12144,19571,14723) ## stream km (OP sthd petition Tab4)
-# areas<-c(299,445,629,325) ## square miles watershed
-areas<-c(4.38,6.95,9.47,6.61) ## km^2 habitat (Ohlberger et al. 2017)
-areaD<-data.frame(cbind(pop=pops,area=areas))
-}
-##---------------------------------------------------------## coastal
-if(spatial_extent=="coastal"){
-pops<-c("Chehalis","Hoh","Humptulips","Queets","Quillayute","Quinault","Willapa","North","Palix","Nemah","Naselle","Bear")
-areaD<-NULL
-}
-##---------------------------------------------------------## coastal
-if(spatial_extent=="northcoast"){
 pops<-c("Chehalis","Hoh","Humptulips","Queets","Quillayute","Quinault")
-areaD<-NULL
-}
-write.csv(areaD,"IPM_habitat_areas.csv",row.names=F)
-##------------------------------------------------## Quillayute flows
-# Bogachiel=12042800 Calawah=12043000 Dickey=12043100 SolDuc=12042500
+areas<-c(1965,242,224,332,658,253)
+write.csv(areas,"IPM_habitat_areas.csv",row.names=F)
 ##-----------------------------------------------## prepare fish data
 pops<-sort(pops)
 nP<-length(pops)
+fish_dat<-NULL
 for(i in 1:nP) {
    pop_dat<-data_prep(
       system=pops[i],
       file_dir=file_dir,
       age_dir=age_dir)
-   if(i==1){fish_dat<-pop_dat}else{fish_dat<-bind_rows(fish_dat,pop_dat)}
+   fish_dat<-bind_rows(fish_dat,pop_dat)
 }
-if(spatial_extent=="OPswWA"){
-fish_dat$S_obs[fish_dat$pop=="Grays River" & fish_dat$year==1999]<-1000
-}
+
 ##-----------------------------## only years with observed escapement
 fish_dat<-fish_dat %>% filter(S_obs>0) 
 all_years<-sort(unique(fish_dat$year))
 ##------------------------------------------## add area by population
-if(spatial_extent %in% c("OP")){
 fish_dat<-fish_dat %>% 
    full_join(data.frame(cbind(pop=pops,area=areas))) %>%
    mutate_at('area',as.numeric) %>%
    dplyr::select(-A) %>%
    rename(A=area)
-}
 
 ##=====================## limit number of initial years without catch
 ##-------------------------## get first year catch data by population
@@ -77,23 +53,17 @@ frst_yrs<-fish_dat %>%
    slice_min(year) %>% 
    dplyr::select(pop,min_year=year)
 ##---------------## drop data prior to first catch year minus min age
+## so NAs in F_rate during early years can be set to zero because the post-removal spawner abundance in years 1:min_age is drawn from prior
 fish_dat<-fish_dat %>% 
    full_join(frst_yrs) %>%
    filter(year>min_year-3) %>% ## min_age=2
    dplyr::select(-min_year)
-## now early year NAs in F_rate/B_take_obs can be set to zero because post-removal spawner abundance in years 1:min_age is drawn from prior
-##----------------------------## set NAs in F_rate/B_take_obs to zero
-if(cdata_type=="count") { 
-   fish_dat<-fish_dat %>% 
-      mutate(F_rate=0) %>%
-      mutate(B_take_obs=replace_na(B_take_obs,0))
-   }
-if(cdata_type=="rate") {
-   fish_dat<-fish_dat %>% 
-      mutate(B_take_obs=0) %>%
-      mutate(F_rate=replace_na(F_rate,0))
-}
 
+##----------------------------## set NAs in F_rate/B_take_obs to zero
+fish_dat<-fish_dat %>% 
+   mutate(B_take_obs=0) %>%
+   mutate(F_rate=replace_na(F_rate,0))
+   
 ##==============================================## correct age format
 age_cols<-names(fish_dat)[grepl("n_age",names(fish_dat))]
 ##-------------------## drop age columns with only zeros if necessary
@@ -236,7 +206,7 @@ covar_dat<-pinks %>%
    full_join(flows,by='year') %>%
    filter(year>min(fish_dat$year))
 
-write.csv(covar_dat,"IPM_covar_dat_all.csv",row.names=F)
+write.csv(covar_dat,"data/IPM_covar_dat_all.csv",row.names=F)
 
 ##===================================================## include flows
 ## can't be included in post-hoc test of shared residuals

@@ -29,16 +29,13 @@ covar_dat<-read.csv("IPM_covar_dat_all.csv")
 
 ##=========================================================## fit IPM
 covar_effects<-TRUE ## TRUE or FALSE
-year_effect<-TRUE ## TRUE or FALSE
+year_effect<-FALSE ## TRUE or FALSE
 SR_mod<-"Ricker" ## SR function (Ricker/BH)
 ##----------------------------------------------------------## priors
 priors<- list(
-   ## hyper mean and SD of log productivity
-   mu_alpha ~ normal(1.5,0.5), 
-   ## mean maiden spawner age distribution
-   mu_p ~ dirichlet(c(1,2,47,44,5,1)), 
-   ## mean kelt survival rate across years
-   mu_SS ~ beta(1.5,3) 
+   mu_alpha ~ normal(1.5,0.5), ## hyper mean/SD of log productivity
+   mu_p ~ dirichlet(c(1,2,47,44,5,1)), ## mean maiden spawner age dist
+   mu_SS ~ beta(1.5,3) ## mean kelt survival rate across years
 )
 ##----------------------------------------------## add covariate data
 if(covar_effects) { ## no NAs in covariates
