@@ -22,7 +22,6 @@ setwd(file.path(out_dir))
 ##========================================================## settings
 covar_effects<-TRUE ## TRUE or FALSE
 year_effect<-FALSE ## TRUE or FALSE
-SR_mod<-"Ricker" ## SR function (Ricker/BH)
 
 ##============================================================## data
 fish_dat<-read.csv(paste0(home,"/data/IPM_fish_dat_all.csv"))
@@ -56,7 +55,7 @@ if(covar_effects) {
 IPM_fit<-salmonIPM(
    life_cycle="SSiter",
    pool_pops=TRUE,
-   SR_fun=SR_mod, 
+   SR_fun="Ricker", 
    par_models=par_models, 
    fish_data=fish_dat,
    prior=list(
