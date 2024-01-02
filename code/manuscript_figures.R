@@ -19,8 +19,7 @@ setwd(file.path(out_dir))
 ##=================================================================##
 ##========================================## load data and model fit
 ##=================================================================##
-covar_effects<-TRUE ## plot model with or without covariate effects
-covar_dat<-read.csv("IPM_covar_dat_all.csv")
+covar_dat<-read.csv(paste0(home,"/data/IPM_covar_dat_all.csv"))
 
 ##=========================================================## IPM fit
 ##----------------------------------------------## without covariates
@@ -29,6 +28,7 @@ IPM_fit_without_covars<-readRDS(paste0(home,"/output/",file1))
 ##-------------------------------------------------## with covariates
 file2<-"IPM_fit_with_covars.Rdata"
 IPM_fit_with_covars<-readRDS(paste0(home,"/output/",file2))
+
 ##=======================================================## fish data
 ##----------------------------------------------## without covariates
 file3<-"IPM_fish_dat_without_covars.csv"
@@ -38,14 +38,10 @@ dat_years_without_covars<-sort(unique(fish_dat_without_covars$year))
 file4<-"IPM_fish_dat_with_covars.csv"
 fish_dat_with_covars<-read.csv(paste0(home,"/output/",file4))
 dat_years_with_covars<-sort(unique(fish_dat_with_covars$year))
-##======================================================## main plots
-if(covar_effects){
-   IPM_fit<-IPM_fit_with_covars
-   fish_dat<-fish_dat_with_covars
-}else{
-   IPM_fit<-IPM_fit_without_covars
-   fish_dat<-fish_dat_without_covars
-}
+
+##=====================================## fit and data for main plots
+IPM_fit<-IPM_fit_with_covars
+fish_dat<-fish_dat_with_covars
 pops<-unique(fish_dat$pop)
 nP<-length(pops)
 N<-dim(fish_dat)[1]
@@ -268,19 +264,7 @@ surv_med<-data.frame(surv=apply(s_SS_post,2,median)) %>%
    data.frame()
 
 ##---------------------------------## recruits/spawner at equilibrium
-RpS_plot<-RpS_qs %>% 
-   left_join(surv_med,by=c("pop","year"))
-
-if(covar_effects) { 
-   RpS_plot<-RpS_plot 
-}else{ 
-   RpS_plot<-RpS_plot %>% 
-      group_by(pop) %>%
-      slice(1:(n()-5)) %>%
-      data.frame()
-} 
-## drop years with incomplete recruitment when no covariates in model
-## i.e., only recruitment for which dominant ages have been observed
+RpS_plot<-RpS_qs %>%  left_join(surv_med,by=c("pop","year"))
 
 ##------------------------------## plot time-varying recruits/spawner
 p3 <- RpS_plot  %>%
