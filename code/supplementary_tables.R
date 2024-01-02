@@ -1,6 +1,6 @@
 ##=================================================================##
 ##                                                                 ##
-##                    Make supplementary tables                    ##
+##                   Prepare supplementary tables                  ##
 ##                                                                 ##
 ##=================================================================##
 
@@ -9,8 +9,6 @@ pkg<-c("here","tidyverse","salmonIPM","posterior")
 if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdiff(pkg,rownames(installed.packages())),dependencies=T)}
 invisible(lapply(pkg,library,character.only=T))
 home<-here::here()
-
-cis<-c(0.05,0.5,0.95) 
 
 ##================================================## output directory
 out_dir<-paste0(home,"/output/")
@@ -24,7 +22,7 @@ fish_dat<-read.csv(paste0(home,"/output/IPM_fish_dat_with_covars.csv"))
 pops<-unique(fish_dat$pop)
 
 ##=================================================## hyperparameters
-# vec_mat_para<-c("beta_R","mu_p","sigma_pop_p","R_pop_p","sigma_p","R_p","beta_SS") ## vector-matrix parameters
+cis<-c(0.05,0.5,0.95) 
 
 para_names<-c("mu_alpha","sigma_alpha","mu_Rmax","sigma_Rmax", "rho_alphaRmax","rho_R","sigma_year_R","sigma_R","mu_SS","rho_SS", "sigma_year_SS","sigma_SS","tau") 
 
