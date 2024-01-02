@@ -8,7 +8,7 @@ code/create_SST_grid.R
 code/data_river_flows.R
 data/covariates
 data/old_flow_data
-data/RiverFiles
+data/fish_data
 data/SST_grid
 output
 map
