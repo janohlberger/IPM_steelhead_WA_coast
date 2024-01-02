@@ -18,7 +18,7 @@ The `code` directory contains the following four scripts:
 
 | File                    | Description                               |
 | ----------------------- | ----------------------------------------- |
-| `IPM_sthd_multipop.R`   | Loads fish and covariate data and fits IPM|
+| `IPM_sthd_multipop.R`   | Fits integrated population models (IPMs)  |
 | `posthoc_analysis.R`    | Post-hoc analysis for covariate selection |
 | `manuscript_figures.R`  | Produces the main text figures            |
 | `supplementary_tables.R`| Produces the supplementary tables         |
