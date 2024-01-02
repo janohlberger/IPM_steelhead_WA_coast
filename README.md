@@ -4,7 +4,7 @@
 This repository contains code to fit a hierarchical Integrated Population Model (IPM) to multiple populations of wild winter steelhead (_Oncorhynchus mykiss_) on the Washington coast. The IPM is a statistical population dynamics models that integrates information on spawner abundances, total harvest, and spawner age structure into a combined run-reconstruction and spawner-recruitment model. It accounts for iteroparity by distinguishing maiden from repeat spawners and estimates time-varying kelt survival rates. The model also estimates time-varying recruitment residuals and population parameters such as productivity and capacity.
 
 ## Repository Structure 
-The repository contains the following two sub-directories:
+The repository contains the following sub-directories:
 
 | Directory   | Description                                           |
 | ----------- | ----------------------------------------------------- |
@@ -14,7 +14,7 @@ The repository contains the following two sub-directories:
 An `output` folder is created when running the first analysis script.
 
 ## Analyses
-The `code` directory contains the following four scripts:
+The `code` directory contains the following scripts:
 
 | File                    | Description                               |
 | ----------------------- | ----------------------------------------- |
