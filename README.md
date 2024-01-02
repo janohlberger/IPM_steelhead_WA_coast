@@ -11,6 +11,8 @@ The repository contains the following two sub-directories:
 | `code`      | Contains code to run the analyses and produce figures |
 | `data`      | Contains fish and covariate data used in the analysis |
 
+An `output` folder is created when running the first analysis script.
+
 ## Analyses
 The `code` directory contains the following four scripts:
 
@@ -18,10 +20,24 @@ The `code` directory contains the following four scripts:
 | ----------------------- | ----------------------------------------- |
 | `IPM_sthd_multipop.R`   | Loads fish and covariate data and fits IPM|
 | `posthoc_analysis.R`    | Post-hoc analysis for covariate selection |
-| `manuscript_figures.R`  | Produces the manuscript figures           |
+| `manuscript_figures.R`  | Produces the main text figures            |
 | `supplementary_tables.R`| Produces the supplementary tables         |
+| `year_effects.R`        | Compares models with/without year effects |
 
-Notes: To produce the full set of results presented in the manuscript, four different versions of the IPM need to be fit - using combinations of covar_effects=TRUE or covar_effects=FALSE and year_effect=TRUE or year_effect=FALSE. The covariate model presented in the manuscript figures uses covar_effects=TRUE and year_effect=FALSE.
+To produce the full set of results presented in the manuscript, four different versions of the IPM need to be fit - using combinations of covar_effects=TRUE or covar_effects=FALSE and year_effect=TRUE or year_effect=FALSE. The main covariate model presented in the manuscript figures uses covar_effects=TRUE and year_effect=FALSE.
+
+To reproduce the full analysis, run scripts in the following order::
+
+1. `IPM_sthd_multipop.R` using covar_effects=FALSE and year_effect=FALSE
+2. `posthoc_analysis.R` to identify covariates to be included in the IPM
+3. `IPM_sthd_multipop.R` using covar_effects=TRUE and year_effect=FALSE
+4. `manuscript_figures.R` to produce the main text figures
+5. `supplementary_tables.R` to produce the supplementary tables
+6. `IPM_sthd_multipop.R` using year_effect=TRUE with/without covariates
+7. `year_effects.R` to compare time trends of the four different IPMs
+
+Once results have been saved in an `output` folder, the other scripts can be run in any order to produce the 
+The scripts should be run in the following order: 
 
 ## Dependencies
 The model fitting relies on the R package 'salmonIPM'. This package can be made available upon request to the main developer Eric Buhle via GitHub (https://github.com/ebuhle) or email (<eric.buhle@noaa.gov>).
