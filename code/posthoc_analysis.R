@@ -1,22 +1,14 @@
 ##=================================================================##
 ##                                                                 ##
-## Run posthoc analysis of recruitment and kelt survival anomalies ##
+##                      Run posthoc analysis                       ##
 ##                                                                 ##
 ##=================================================================##
 
 ##========================================================## packages
-pkg<-c("here","tidyverse","ggplot2","ggsidekick","gridExtra", "RColorBrewer","Hmisc","MuMIn","relaimpo","visreg","salmonIPM")
+pkg<-c("here","tidyverse","MuMIn","relaimpo","visreg","salmonIPM")
 if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdiff(pkg,rownames(installed.packages())),dependencies=T)}
 invisible(lapply(pkg,library,character.only=T))
-
-##========================================================## settings
-theme_set(theme_sleek())
-options(rstudio.help.showDataPreview=FALSE)
-
-##=======================================================## functions
 home<-here::here()
-fxn<-list.files(paste0(home,"/functions"))
-invisible(sapply(FUN=source,paste0(home,"/functions/",fxn)))
 
 ##================================================## output directory
 out_dir<-paste0(home,"/output/")
@@ -27,8 +19,8 @@ setwd(file.path(out_dir))
 ##=========================## load IPM fit, covariates, and fish data
 ##=================================================================##
 IPM_fit<-readRDS(paste0(home,"/output/IPM_fit_without_covars.Rdata"))
-cov_dat<-read.csv(paste0(home,"/output/IPM_covar_dat_all.csv"))
-fish_dat<-read.csv(paste0(home,"/output/IPM_fish_dat_all.csv"))
+cov_dat<-read.csv(paste0(home,"/data/IPM_covar_dat_all.csv"))
+fish_dat<-read.csv(paste0(home,"/data/IPM_fish_dat_all.csv"))
 dat_years<-sort(unique(fish_dat$year))
 pops<-unique(fish_dat$pop)
 nP<-length(pops)
@@ -115,21 +107,6 @@ for(i in 1:length(mod_terms)) {
    visreg(mod_rec,xvar=covar,xlab=xlab[i],partial=T,ylab="Partial effect on recruitment anomaly",scale="response",xtrans=xtrans,points.par=list(cex=1,pch=16,col=1),fill.par=list(col=alpha(1,0.1)),line.par=list(col=1))
 }
 dev.off()
-
-##===============================================## model predictions
-newD<-list(pinks_4=df$pinks_4,SST_4=df$SST_4,NPGO_2=df$NPGO_2, av_CFS_min_1=df$av_CFS_min_1)
-predicted<-predict(mod_rec,newdata=newD,se.fit=T,interval="confidence",level=0.95,type="response")
-pp2<-data.frame(predicted$fit) %>% 
-   add_column(year=df$year) %>%
-   ggplot(aes(x=year,y=fit)) +
-   geom_line(aes(y=fit),lwd=0.5,color="gray") +
-   geom_ribbon(aes(ymin=lwr,ymax=upr),color="gray",alpha=0.1) +
-   geom_line(aes(y=residuals),data=df,lwd=0.25) +
-   geom_point(aes(y=residuals),data=df,size=1) +
-   labs(x="Year",y="Recruitment anomaly") + 
-   theme_sleek() +
-   NULL
-ggsave("IPM-sthd-recruitment-anomaly-predicted-and-observed.pdf",pp2,width=5,height=4)
 
 ##=================================================================##
 ##====================## linear model of kelt survival rate anomalies
@@ -221,22 +198,6 @@ for(i in 1:length(mod_terms)) {
    visreg(mod_surv,xvar=covar,xlab=xlabels$name[i],partial=T,ylab="Partial effect on kelt survival anomaly",scale="response",xtrans=xtrans,points.par=list(cex=1,pch=16,col=1),fill.par=list(col=alpha(1,0.1)),line.par=list(col=1))
 } 
 dev.off()
-
-##===============================================## model predictions
-# newD<-list(SST=df$SST,pinks=df$pinks)
-newD<-list(SST=df$SST,pinks=df$pinks,NPGO=df$NPGO)
-predicted<-predict(mod_surv,newdata=newD,se.fit=T,interval="confidence",level=0.95,type="response")
-pp4<-data.frame(predicted$fit) %>% 
-   add_column(year=df$year) %>%
-   ggplot(aes(x=year,y=fit)) +
-   geom_line(aes(y=fit),lwd=0.5,color="gray") +
-   geom_ribbon(aes(ymin=lwr,ymax=upr),color="gray",alpha=0.1) +
-   geom_line(aes(y=survival),data=df,lwd=0.25) +
-   geom_point(aes(y=survival),data=df,size=1) +
-   labs(x="Year",y="Kelt survival anomaly") + 
-   theme_sleek() +
-   NULL
-ggsave("IPM-sthd-kelt-survival-anomaly-predicted-and-observed.pdf",pp4,width=5,height=4)
 
 ##=================================================================##
 ##=================================================================##
