@@ -1,22 +1,15 @@
 ##=================================================================##
 ##                                                                 ##
-##                      Plot manuscript figures                    ##
+##                    Plot manuscript figures                      ##
 ##                                                                 ##
 ##=================================================================##
 
 ##========================================================## packages
-pkg<-c("here","tidyverse","ggplot2","cowplot","ggsidekick","gridExtra","RColorBrewer","salmonIPM","viridis","posterior")
+pkg<-c("here","tidyverse","cowplot","ggsidekick","gridExtra","RColorBrewer","salmonIPM","viridis","posterior")
 if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdiff(pkg,rownames(installed.packages())),dependencies=T)}
 invisible(lapply(pkg,library,character.only=T))
-
-##========================================================## settings
 theme_set(theme_sleek())
-options(rstudio.help.showDataPreview=FALSE)
-
-##=======================================================## functions
 home<-here::here()
-fxn<-list.files(paste0(home,"/functions"))
-invisible(sapply(FUN=source,paste0(home,"/functions/",fxn)))
 
 ##================================================## output directory
 out_dir<-paste0(home,"/output/")
