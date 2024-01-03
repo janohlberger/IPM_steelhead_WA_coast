@@ -34,7 +34,7 @@ To reproduce the full analysis, run scripts in the following order::
 4. `manuscript_figures.R` to produce the main text figures
 5. `supplementary_tables.R` to produce the supplementary tables
 6. `IPM_sthd_multipop.R` using year_effect=TRUE with/without covariates
-7. `year_effects.R` to compare time trends of the four different IPMs
+7. `year_effects.R` to compare year effects with vs. without covariates
 
 ## Dependencies
 The model fitting relies on the R package 'salmonIPM'. This package can be made available upon request to the main developer Eric Buhle via GitHub (https://github.com/ebuhle) or email (<eric.buhle@noaa.gov>).
