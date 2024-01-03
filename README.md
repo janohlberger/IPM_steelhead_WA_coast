@@ -26,7 +26,7 @@ The `code` directory contains the following scripts:
 
 To produce the full set of results presented in the manuscript, four different versions of the IPM need to be fit - using combinations of covar_effects=TRUE or covar_effects=FALSE and year_effect=TRUE or year_effect=FALSE. The main covariate model presented in the manuscript figures uses covar_effects=TRUE and year_effect=FALSE.
 
-To reproduce the full analysis, run scripts in the following order::
+To reproduce the full analysis, run scripts in the following order:
 
 1. `IPM_sthd_multipop.R` using covar_effects=FALSE and year_effect=FALSE
 2. `posthoc_analysis.R` to identify covariates to be included in the IPM
@@ -35,6 +35,8 @@ To reproduce the full analysis, run scripts in the following order::
 5. `supplementary_tables.R` to produce the supplementary tables
 6. `IPM_sthd_multipop.R` using year_effect=TRUE with/without covariates
 7. `year_effects.R` to compare year effects with vs. without covariates
+
+To produce the main figures only, run `IPM_sthd_multipop.R` using covar_effects=TRUE and using covar_effects=FALSE and subsequently run `manuscript_figures.R`.
 
 ## Dependencies
 The model fitting relies on the R package 'salmonIPM'. This package can be made available upon request to the main developer Eric Buhle via GitHub (https://github.com/ebuhle) or email (<eric.buhle@noaa.gov>).
