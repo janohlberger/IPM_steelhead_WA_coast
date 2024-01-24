@@ -64,6 +64,22 @@ probs<-c(0.05,0.25,0.5,0.75,0.95) ## median with 50% and 95% CIs
 tau_post<-extract1(IPM_fit,"tau")
 tau_quants<-quantile(tau_post,prob=probs)
 
+##=================================## variance explained by covariates
+## calculate variance explained (R2) by covariates by dividing sigma2 for process errors with covariates by the sigma2 without covariates
+## except that the model is fit to slightly different time series due to the required lag of covariates >> 'approximate variance explained'?
+
+##------------------------------------## shared recruitment anomalies
+sigma_R_wo_cov<-extract1(IPM_fit_without_covars,"sigma_year_R")
+sigma_R_w_cov<-extract1(IPM_fit_with_covars,"sigma_year_R")
+sigma_R_median_ratio<-median(sigma_R_w_cov^2/sigma_R_wo_cov^2) 
+sigma_R_ratio_median<-median(sigma_R_w_cov)^2/median(sigma_R_wo_cov)^2
+
+##----------------------------------## shared kelt survival anomalies
+sigma_SS_wo_cov<-extract1(IPM_fit_without_covars,"sigma_year_SS")
+sigma_SS_w_cov<-extract1(IPM_fit_with_covars,"sigma_year_SS")
+sigma_SS_median_ratio<-median(sigma_SS_w_cov^2/sigma_SS_wo_cov^2) 
+sigma_SS_ratio_median<-median(sigma_SS_w_cov)^2/median(sigma_SS_wo_cov)^2
+
 ##=================================================================##
 ##=================## Figure 2 - spawners, recruitment, kelt survival
 ##=================================================================##
@@ -263,16 +279,19 @@ p1c <- eta_SS_qs %>%
 
 ##===============================================## covariate effects
 cov_eff_post<-data.frame(extract1(IPM_fit_with_covars,"beta_SS"))
-cov_eff_post$Flow<-NA
-names(cov_eff_post)<-c("NPGO","SST","Pinks","Flow")
+#cov_eff_post$Flow<-NA
+#names(cov_eff_post)<-c("NPGO","SST","Pinks","Flow")
+cov_eff_post$NPGO<-NA
+names(cov_eff_post)<-c("SST","Pinks","NPGO")
+cov_eff_med<-apply(cov_eff_post,2,median) ## median effect sizes
 
 ##---------------------------------------------------## effects plots
 p1b <- cov_eff_post %>% 
    pivot_longer(col=everything(),names_to="name",values_to="value") %>%
-   mutate(name=case_when(
-      name!="Flow" ~ name,
-      name=="Flow" ~""
-      )) %>%
+   # mutate(name=case_when(
+   #    name!="Flow" ~ name,
+   #    name=="Flow" ~""
+   #    )) %>%
    ggplot(aes(x=name,y=value)) +
    stat_summary(fun.data=summary_CI90,size=0.25,col="goldenrod1") +
    stat_summary(fun.data=summary_CI50,size=1.0,col="goldenrod1") +  
@@ -362,7 +381,8 @@ p2c <- eta_R_qs %>%
 
 ##===============================================## covariate effects
 beta_R_post<-data.frame(extract1(IPM_fit,"beta_R"))
-names(beta_R_post)<-c("NPGO","SST","Pinks","Flow")
+names(beta_R_post)<-c("NPGO","SST","Pinks")#,"Flow")
+beta_R_med<-apply(beta_R_post,2,median) ## median effect sizes
 
 ##---------------------------------------------------## effects plots
 p2b <- beta_R_post %>% 
@@ -421,6 +441,7 @@ etas_SS_med<-data.frame(anomaly=apply(eta_SS_post,2,median)) %>%
    mutate(color=factor(ifelse(anomaly>0,"positive","negative")))
 
 pdat_SS<-etas_SS_med %>% 
+   slice(-n()) %>%
    left_join(covar_dat%>%dplyr::select(year,SST,pinks),by="year") %>%
    filter(!is.na(pinks)) %>%
    filter(!is.na(SST)) %>%
@@ -434,7 +455,7 @@ etas_R_med<-data.frame(anomaly=apply(eta_R_post,2,median)) %>%
    add_column(year=dat_years_without_covars) %>%
    mutate(color=factor(ifelse(anomaly>0,"positive","negative")))
 
-pdat_R<-etas_R_med %>% 
+pdat_R<-etas_R_med %>%
    left_join(covar_dat%>%dplyr::select(year,SST_4,pinks_4),by="year")%>%
    filter(!is.na(pinks_4)) %>%
    filter(!is.na(SST_4)) %>%
@@ -442,15 +463,25 @@ pdat_R<-etas_R_med %>%
    dplyr::select(name,anomaly,year,color,SST=SST_4,Pinks=pinks_4)
 
 ##===================================================## combined plot
+# pdat_R<-pdat_R %>% filter(year %in% pdat_SS$year)
+# pdat_SS<-pdat_SS %>% filter(year %in% pdat_R$year)
+
 pdat<-rbind(pdat_R,pdat_SS) 
+
+xmin<-min(pdat$SST)-0.2;xmax<-max(pdat$SST)+0.2
+ymin<-min(pdat$Pinks)-80;ymax<-max(pdat$Pinks)+80
+
+xmin<-8.6;xmax<-12.0
+ymin<-110;ymax<-875
+
 p<-pdat%>% 
    ggplot(aes(x=SST,y=Pinks,size=abs(anomaly),color=color))+
-   geom_hline(yintercept=mean(pdat$Pinks),linetype="dashed",linewidth=0.2)+
-   geom_vline(xintercept=mean(pdat$SST),linetype="dashed",linewidth=0.2)+
-   annotate("text",x=9.7,y=100,
+   #geom_hline(yintercept=mean(pdat$Pinks),linetype="dashed",linewidth=0.2)+
+   #geom_vline(xintercept=mean(pdat$SST),linetype="dashed",linewidth=0.2)+
+   annotate("text",x=xmin,y=ymin,
             size=2.5,color="black",hjust=0,vjust=0,lineheight=0.9, 
             label="cold and low competition\nocean environment") +
-   annotate("text",x=12.7,y=820,
+   annotate("text",x=xmax,y=ymax,
             size=2.5,color="black",hjust=1,vjust=1,lineheight=0.9,
             label="warm and high competition\nocean environment") +
    geom_point(alpha=0.75)+
@@ -458,8 +489,8 @@ p<-pdat%>%
    scale_radius(range=c(0.5,9))+
    scale_color_manual(values=c("red","blue"),
                       labels=c("negative","positive")) +
-   scale_x_continuous(limits=c(9.7,12.7),breaks=seq(5,15,0.5))+
-   scale_y_continuous(limits=c(100,820),breaks=seq(0,900,100))+
+   scale_x_continuous(limits=c(xmin,xmax),breaks=seq(8,15,0.5))+
+   scale_y_continuous(limits=c(ymin,ymax),breaks=seq(0,800,100))+
    theme_classic()+
    labs(x="SST (°C)",y="Pink salmon abundance (millions)")+
    labs(size="anomaly",color="")+
@@ -474,9 +505,10 @@ p<-pdat%>%
          legend.text=element_text(size=10))+
    guides(color=guide_legend(order=1,override.aes=list(size=5)),
           size=guide_legend(order=2)) +
-   facet_wrap(vars(factor(name,c("Recuitment anomaly","Kelt survival anomaly"))),ncol=2) +
+   facet_wrap(vars(factor(name,c("Recuitment anomaly","Kelt survival anomaly"))),ncol=2,scales="free") +
    NULL
-ggsave("IPM-sthd-anomalies-vs-covariates.pdf",p,width=8,height=4)
+
+ggsave("IPM-sthd-anomalies-vs-covariates.pdf",p,width=8.5,height=4)
        
 ##=================================================================##
 ##=================================================================##

@@ -24,8 +24,10 @@ covar_effects<-TRUE ## TRUE or FALSE
 year_effect<-FALSE ## TRUE or FALSE
 
 ##============================================================## data
-fish_dat<-read.csv(paste0(home,"/data/IPM_fish_dat_all.csv"))
-covar_dat<-read.csv(paste0(home,"/data/IPM_covar_dat_all.csv"))
+fish_dat<-read.csv(paste0(home,"/data/IPM_fish_dat_all.csv")) %>%
+   dplyr::select(-F_rate_NA) ## column used for plotting only
+# covar_dat<-read.csv(paste0(home,"/data/IPM_covar_dat_all.csv"))
+covar_dat<-read.csv(paste0(home,"/data/IPM_covar_dat_selected.csv"))
 
 ## no NAs allowed in covariate data
 if(covar_effects) { 
@@ -39,9 +41,11 @@ nY<-length(dat_years) ## number of years
 
 ##======================================## regressions to be included
 if(covar_effects) {
-   par_models<-list(s_SS~NPGO+SST+pinks,R~NPGO_2+SST_4+pinks_4+av_CFS_min_1)
+   # par_models<-list(s_SS~NPGO+SST+pinks,R~NPGO_2+SST_4+pinks_4+av_CFS_min_1)
+   par_models<-list(s_SS~SST+pinks,R~NPGO_2+SST_4+pinks_4)
    if(year_effect) { 
-      par_models<-list(s_SS~year+NPGO+SST+pinks,R~year+NPGO_2+SST_4+pinks_4+av_CFS_min_1)
+      # par_models<-list(s_SS~year+NPGO+SST+pinks,R~year+NPGO_2+SST_4+pinks_4+av_CFS_min_1)
+      par_models<-list(s_SS~year+SST+pinks,R~year+NPGO_2+SST_4+pinks_4)
    }
 } else {
    if(year_effect) { 
@@ -62,10 +66,10 @@ IPM_fit<-salmonIPM(
       mu_alpha~normal(1.5,0.5),
       mu_p~dirichlet(c(1,2,47,44,5,1)),
       mu_SS~beta(1.5,3)),
-   pars=c(stan_pars("IPM_SSiter_pp")),
+   pars=c(stan_pars("IPM_SSiter_pp"),"zeta_year_R","zeta_year_SS"),
    chains=3, 
-   iter=2000,
-   warmup=1000, 
+   iter=1000,
+   warmup=500, 
    control=list(adapt_delta=0.95,max_treedepth=10)
    # control=list(adapt_delta=0.99,max_treedepth=12)
 )
