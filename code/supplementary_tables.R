@@ -16,7 +16,7 @@ if(!file.exists(out_dir)) dir.create(file.path(out_dir))
 setwd(file.path(out_dir))
 
 ##========================================## load data and model fit
-covar_dat<-read.csv("IPM_covar_dat_all.csv")
+covar_dat<-read.csv(paste0(home,"/data/IPM_covar_dat_all.csv"))
 IPM_fit<-readRDS(paste0(home,"/output/IPM_fit_with_covars.Rdata"))
 fish_dat<-read.csv(paste0(home,"/output/IPM_fish_dat_with_covars.csv"))
 pops<-unique(fish_dat$pop)

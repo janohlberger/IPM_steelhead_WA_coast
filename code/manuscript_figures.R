@@ -19,7 +19,8 @@ setwd(file.path(out_dir))
 ##=================================================================##
 ##========================================## load data and model fit
 ##=================================================================##
-covar_dat<-read.csv(paste0(home,"/data/IPM_covar_dat_all.csv"))
+# covar_dat<-read.csv(paste0(home,"/data/IPM_covar_dat_all.csv"))
+covar_dat<-read.csv(paste0(home,"/data/IPM_covar_dat_selected.csv"))
 
 ##========================================================## IPM fits
 ##----------------------------------------------## without covariates
@@ -40,16 +41,11 @@ fish_dat_with_covars<-read.csv(paste0(home,"/output/",file4))
 dat_years_with_covars<-sort(unique(fish_dat_with_covars$year))
 
 ##=====================================## fit and data for main plots
-IPM_fit<-IPM_fit_with_covars
+IPM_fit_plot<-IPM_fit_with_covars
 fish_dat<-fish_dat_with_covars
 pops<-unique(fish_dat$pop)
 nP<-length(pops)
 N<-dim(fish_dat)[1]
-   
-##=======================================================## posterior
-df_post<-as.data.frame(IPM_fit) ## full posterior
-nS<-dim(df_post)[1] ## number of samples
-df_out<-data.frame(summary(IPM_fit)$summary) ## summary 
 
 ##===================================================## plot settings
 colors<-rev(c("#A86260","#A5B1C4","#3B4D6B","#89A18D","#747260","#B3872D","#774C2C")) 
@@ -60,8 +56,13 @@ summary_CI50<-function(x) { return(data.frame(y=median(x,na.rm=T),ymin=quantile(
 ##-------------------------------------------------------------## CIs
 probs<-c(0.05,0.25,0.5,0.75,0.95) ## median with 50% and 95% CIs
 
+##=======================================================## posterior
+df_post<-as.data.frame(IPM_fit_plot) ## full posterior
+nS<-dim(df_post)[1] ## number of samples
+df_out<-data.frame(summary(IPM_fit_plot)$summary) ## summary 
+
 ##===============================================## observation error
-tau_post<-extract1(IPM_fit,"tau")
+tau_post<-extract1(IPM_fit_plot,"tau")
 tau_quants<-quantile(tau_post,prob=probs)
 
 ##=================================## variance explained by covariates
@@ -85,7 +86,7 @@ sigma_SS_ratio_median<-median(sigma_SS_w_cov)^2/median(sigma_SS_wo_cov)^2
 ##=================================================================##
 
 ##==============================================## estimated spawners
-S_post<-extract1(IPM_fit,"S")
+S_post<-extract1(IPM_fit_plot,"S")
 
 S_qs<-t(apply(S_post,2,function(x) quantile(x,prob=probs)))
 S_est_qs<-S_qs %>% data.frame() %>%
@@ -93,7 +94,7 @@ S_est_qs<-S_qs %>% data.frame() %>%
 
 ## posterior predictive distribution of spawners
 quants<-c(0.05,0.5,0.95)
-S_draws<-as_draws_rvars(IPM_fit) %>%
+S_draws<-as_draws_rvars(IPM_fit_plot) %>%
    mutate_variables(S_ppd=rvar_rng(rlnorm,length(S),log(S),tau))
 S_ppd<-summarise_draws(S_draws$S_ppd,~quantile(.x,probs=quants))
 
@@ -129,7 +130,7 @@ p1 <- S_all %>%
    NULL
 
 ##==============================================## estimated recruits
-R_post<-extract1(IPM_fit,"R")
+R_post<-extract1(IPM_fit_plot,"R")
 R_qs<-t(apply(R_post,2,function(x) quantile(x,prob=probs))) 
 R_est_qs<-R_qs %>% 
    data.frame() %>%
@@ -156,9 +157,9 @@ p2 <- R_est_qs %>%
    NULL
 
 ##=============================================## kelt survival rates
-mu_surv_post<-extract1(IPM_fit,"mu_SS")
+mu_surv_post<-extract1(IPM_fit_plot,"mu_SS")
 mu_surv_qs<-t(quantile(mu_surv_post,prob=probs)) ## quantiles
-surv_post<-extract1(IPM_fit,"s_SS") ## survival rates by population
+surv_post<-extract1(IPM_fit_plot,"s_SS") ## survival rates by population
 
 ##--------------------------## median survival by population and year
 surv_med<-apply(surv_post,2,median) %>% 
@@ -210,6 +211,104 @@ pp<-grid.arrange(p1,p2,p3)
 ggsave("IPM-sthd-spawner-recruit-kelt.pdf",pp,width=1+2*nP,height=7.5)
 
 ##=================================================================##
+##===========================================## recruitment anomalies
+##=================================================================##
+
+##==============================================## without covariates
+eta_R_post<-extract1(IPM_fit_without_covars,"eta_year_R")
+eta_R_qsr<-t(apply(eta_R_post,2,function(x) quantile(x,prob=probs)))
+eta_R_qs<-data.frame(eta_R_qsr) %>% add_column(year=dat_years_without_covars)
+
+sigma_R_post<-extract1(IPM_fit_without_covars,"sigma_R")
+sigma_R_without_covars<-quantile(sigma_R_post,prob=probs)
+sigma_year_R_post<-extract1(IPM_fit_without_covars,"sigma_year_R")
+sigma_year_R_without_covars<-quantile(sigma_year_R_post,prob=probs)
+
+##----------------------------------------## estimate trend over time
+etas_R<-data.frame(median=apply(eta_R_post,2,median),sd=apply(eta_R_post,2,sd)) %>% add_column(year=dat_years_without_covars)
+newdata<-data.frame(year=dat_years_without_covars)
+lm_fit<-lm(etas_R$median~etas_R$year,weights=1/(etas_R$sd^2))
+pred<-predict(lm_fit,newdata,interval="confidence",level=0.95)
+pred<-data.frame(pred) %>% add_column(year=etas_R$year) 
+
+##------------------------------------------------------------## plot
+p2a <- eta_R_qs %>%
+   ggplot(aes(x=year,y=X50.)) +
+   geom_line(lwd=0.4,alpha=1) +
+   geom_ribbon(aes(ymin=X5.,ymax=X95.),color=NA,alpha=0.2) +
+   labs(x="Spawning year",y="Recruitment anomaly") + 
+   scale_y_continuous(limits=c(-1.1,1.1),expand=c(0,0)) +
+   #geom_hline(yintercept=0,lwd=0.2,linetype="dashed") +
+   geom_line(data=pred,aes(y=fit),lwd=0.2,linetype="dashed") +
+   theme_sleek() +
+   theme(axis.text.x=element_text(size=12),
+         axis.title.x=element_text(size=15),
+         axis.text.y=element_text(size=12),
+         axis.title.y=element_text(size=15)) +
+   NULL
+
+##=================================================## with covariates
+eta_R_post<-extract1(IPM_fit_with_covars,"eta_year_R")
+eta_R_qsr<-t(apply(eta_R_post,2,function(x) quantile(x,prob=probs)))
+eta_R_qs<-data.frame(eta_R_qsr) %>% add_column(year=dat_years_with_covars)
+
+sigma_R_post<-extract1(IPM_fit_with_covars,"sigma_R")
+sigma_R_with_covars<-quantile(sigma_R_post,prob=probs)
+sigma_year_R_post<-extract1(IPM_fit_with_covars,"sigma_year_R")
+sigma_year_R_with_covars<-quantile(sigma_year_R_post,prob=probs)
+
+##----------------------------------------## estimate trend over time
+etas_R<-data.frame(median=apply(eta_R_post,2,median),sd=apply(eta_R_post,2,sd)) %>% add_column(year=dat_years_with_covars)
+newdata<-data.frame(year=dat_years_with_covars)
+lm_fit<-lm(etas_R$median~etas_R$year,weights=1/(etas_R$sd^2))
+pred<-predict(lm_fit,newdata,interval="confidence",level=0.95)
+pred<-data.frame(pred) %>% add_column(year=etas_R$year) 
+
+##------------------------------------------------------------## plot
+p2c<-eta_R_qs %>%
+   ggplot(aes(x=year,y=X50.)) +
+   geom_line(lwd=0.4,alpha=1) +
+   geom_ribbon(aes(ymin=X5.,ymax=X95.),fill="goldenrod1",color=NA,alpha=0.3,lwd=0.1) +
+   labs(x="Spawning year",y="Recruitment anomaly") + 
+   scale_y_continuous(limits=c(-1.1,1.1),expand=c(0,0)) +
+   # geom_hline(yintercept=0,lwd=0.2,linetype="dashed") +
+   geom_line(data=pred,aes(y=fit),lwd=0.2,linetype="dashed") +
+   theme_sleek() +
+   theme(axis.text.x=element_text(size=12),
+         axis.title.x=element_text(size=15),
+         axis.text.y=element_text(size=12),
+         axis.title.y=element_text(size=15)) +
+   NULL
+
+##===============================================## covariate effects
+beta_R_post<-data.frame(extract1(IPM_fit_plot,"beta_R"))
+names(beta_R_post)<-c("NPGO","SST","Pinks")#,"Flow")
+beta_R_med<-apply(beta_R_post,2,median) ## median effect sizes
+
+##---------------------------------------------------## effects plots
+p2b<-beta_R_post %>% 
+   pivot_longer(col=everything(),names_to="name",values_to="value")%>%
+   ggplot(aes(x=name,y=value)) +
+   # geom_violin(lwd=0.1,col="white") +
+   stat_summary(fun.data=summary_CI90,size=0.25,color="goldenrod1") +
+   stat_summary(fun.data=summary_CI50,size=1.0,color="goldenrod1") +  
+   geom_hline(yintercept=0,linetype="dashed",linewidth=0.2) +
+   scale_y_continuous(limits=c(-0.3,0.3),expand=c(0,0)) +
+   labs(x="",y="Effect size") + 
+   theme_sleek() +
+   theme(axis.title.x=element_blank(),
+         axis.text.x=element_text(size=12,angle=90,vjust=0.5,hjust=1),
+         axis.text.y=element_text(size=12),
+         axis.title.y=element_text(size=15)) +
+   NULL
+                            
+##---------------------------------## probability above/below zero
+my_pnorm<-function(x,output){ return(pnorm(0,mean=x[1],sd=x[2])) }
+beta_df<-data.frame(apply(beta_R_post,2,median),apply(beta_R_post,2,sd))
+prob_below_zero<-apply(beta_df,1,my_pnorm)
+prob_above_zero <- 1-prob_below_zero
+
+##=================================================================##
 ##=========================================## kelt survival anomalies
 ##=================================================================##
 
@@ -237,6 +336,7 @@ p1a <- eta_SS_qs %>%
    geom_ribbon(aes(ymin=X5.,ymax=X95.),color=NA,alpha=0.2) +
    labs(x="Year",y="Kelt survival anomaly") + 
    scale_y_continuous(limits=c(-1.1,1.1),expand=c(0,0)) +
+   # geom_hline(yintercept=0,lwd=0.2,linetype="dashed") +
    geom_line(data=pred,aes(y=fit),lwd=0.2,linetype="dashed") +
    theme_sleek() +
    theme(axis.text.x=element_text(size=12),
@@ -269,6 +369,7 @@ p1c <- eta_SS_qs %>%
    geom_ribbon(aes(ymin=X5.,ymax=X95.),fill="goldenrod1",color=NA,alpha=0.3,lwd=0.2) +
    labs(x="Year",y="Kelt survival anomaly") + 
    scale_y_continuous(limits=c(-1.1,1.1),expand=c(0,0)) +
+   # geom_hline(yintercept=0,lwd=0.2,linetype="dashed") +
    geom_line(data=pred,aes(y=fit),lwd=0.2,linetype="dashed") +
    theme_sleek() +
    theme(axis.text.x=element_text(size=12),
@@ -279,24 +380,23 @@ p1c <- eta_SS_qs %>%
 
 ##===============================================## covariate effects
 cov_eff_post<-data.frame(extract1(IPM_fit_with_covars,"beta_SS"))
-#cov_eff_post$Flow<-NA
-#names(cov_eff_post)<-c("NPGO","SST","Pinks","Flow")
 cov_eff_post$NPGO<-NA
 names(cov_eff_post)<-c("SST","Pinks","NPGO")
 cov_eff_med<-apply(cov_eff_post,2,median) ## median effect sizes
 
 ##---------------------------------------------------## effects plots
-p1b <- cov_eff_post %>% 
-   pivot_longer(col=everything(),names_to="name",values_to="value") %>%
-   # mutate(name=case_when(
-   #    name!="Flow" ~ name,
-   #    name=="Flow" ~""
-   #    )) %>%
+p1b<-cov_eff_post %>% 
+   pivot_longer(col=everything(),names_to="name",values_to="value")%>%
+   mutate(name=case_when(
+      name=="NPGO"~"",
+      name=="SST"~"SST",
+      name=="Pinks"~"Pinks"
+      )) %>%
    ggplot(aes(x=name,y=value)) +
    stat_summary(fun.data=summary_CI90,size=0.25,col="goldenrod1") +
    stat_summary(fun.data=summary_CI50,size=1.0,col="goldenrod1") +  
    geom_hline(yintercept=0,linetype="dashed",linewidth=0.2) +
-   scale_y_continuous(limits=c(-0.28,0.11)) +
+   scale_y_continuous(limits=c(-0.3,0.3),expand=c(0,0)) +
    labs(x="",y="Effect size") + 
    theme_sleek() +
    theme(axis.title.x=element_blank(),
@@ -308,101 +408,6 @@ p1b <- cov_eff_post %>%
 ##------------------------------------## probability above/below zero
 my_pnorm<-function(x,output){ return(pnorm(0,mean=x[1],sd=x[2])) }
 beta_df<-data.frame(apply(cov_eff_post,2,median),apply(cov_eff_post,2,sd))
-prob_below_zero<-apply(beta_df,1,my_pnorm)
-prob_above_zero <- 1-prob_below_zero
-
-##=================================================================##
-##===========================================## recruitment anomalies
-##=================================================================##
-
-##==============================================## without covariates
-eta_R_post<-extract1(IPM_fit_without_covars,"eta_year_R")
-eta_R_qsr<-t(apply(eta_R_post,2,function(x) quantile(x,prob=probs)))
-eta_R_qs<-data.frame(eta_R_qsr) %>% add_column(year=dat_years_without_covars)
-
-sigma_R_post<-extract1(IPM_fit_without_covars,"sigma_R")
-sigma_R_without_covars<-quantile(sigma_R_post,prob=probs)
-sigma_year_R_post<-extract1(IPM_fit_without_covars,"sigma_year_R")
-sigma_year_R_without_covars<-quantile(sigma_year_R_post,prob=probs)
-
-##----------------------------------------## estimate trend over time
-etas_R<-data.frame(median=apply(eta_R_post,2,median),sd=apply(eta_R_post,2,sd)) %>% add_column(year=dat_years_without_covars)
-newdata<-data.frame(year=dat_years_without_covars)
-lm_fit<-lm(etas_R$median~etas_R$year,weights=1/(etas_R$sd^2))
-pred<-predict(lm_fit,newdata,interval="confidence",level=0.95)
-pred<-data.frame(pred) %>% add_column(year=etas_R$year) 
-
-##------------------------------------------------------------## plot
-p2a <- eta_R_qs %>%
-   ggplot(aes(x=year,y=X50.)) +
-   geom_line(lwd=0.4,alpha=1) +
-   geom_ribbon(aes(ymin=X5.,ymax=X95.),color=NA,alpha=0.2) +
-   labs(x="Spawning year",y="Recruitment anomaly") + 
-   scale_y_continuous(limits=c(-0.99,0.7),expand=c(0,0)) +
-   geom_line(data=pred,aes(y=fit),lwd=0.2,linetype="dashed") +
-   theme_sleek() +
-   theme(axis.text.x=element_text(size=12),
-         axis.title.x=element_text(size=15),
-         axis.text.y=element_text(size=12),
-         axis.title.y=element_text(size=15)) +
-   NULL
-
-##=================================================## with covariates
-eta_R_post<-extract1(IPM_fit_with_covars,"eta_year_R")
-eta_R_qsr<-t(apply(eta_R_post,2,function(x) quantile(x,prob=probs)))
-eta_R_qs<-data.frame(eta_R_qsr) %>% add_column(year=dat_years_with_covars)
-
-sigma_R_post<-extract1(IPM_fit_with_covars,"sigma_R")
-sigma_R_with_covars<-quantile(sigma_R_post,prob=probs)
-sigma_year_R_post<-extract1(IPM_fit_with_covars,"sigma_year_R")
-sigma_year_R_with_covars<-quantile(sigma_year_R_post,prob=probs)
-
-##----------------------------------------## estimate trend over time
-etas_R<-data.frame(median=apply(eta_R_post,2,median),sd=apply(eta_R_post,2,sd)) %>% add_column(year=dat_years_with_covars)
-newdata<-data.frame(year=dat_years_with_covars)
-lm_fit<-lm(etas_R$median~etas_R$year,weights=1/(etas_R$sd^2))
-pred<-predict(lm_fit,newdata,interval="confidence",level=0.95)
-pred<-data.frame(pred) %>% add_column(year=etas_R$year) 
-
-##------------------------------------------------------------## plot
-p2c <- eta_R_qs %>%
-   ggplot(aes(x=year,y=X50.)) +
-   geom_line(lwd=0.4,alpha=1) +
-   geom_ribbon(aes(ymin=X5.,ymax=X95.),fill="goldenrod1",color=NA,alpha=0.3,lwd=0.1) +
-   labs(x="Spawning year",y="Recruitment anomaly") + 
-   scale_y_continuous(limits=c(-0.99,0.7),expand=c(0,0)) +
-   geom_line(data=pred,aes(y=fit),lwd=0.2,linetype="dashed") +
-   theme_sleek() +
-   theme(axis.text.x=element_text(size=12),
-         axis.title.x=element_text(size=15),
-         axis.text.y=element_text(size=12),
-         axis.title.y=element_text(size=15)) +
-   NULL
-
-##===============================================## covariate effects
-beta_R_post<-data.frame(extract1(IPM_fit,"beta_R"))
-names(beta_R_post)<-c("NPGO","SST","Pinks")#,"Flow")
-beta_R_med<-apply(beta_R_post,2,median) ## median effect sizes
-
-##---------------------------------------------------## effects plots
-p2b <- beta_R_post %>% 
-   pivot_longer(col=everything(),names_to="name",values_to="value") %>%
-   ggplot(aes(x=name,y=value)) +
-   geom_violin(lwd=0.1,col="white") +
-   stat_summary(fun.data=summary_CI90,size=0.25,color="goldenrod1") +
-   stat_summary(fun.data=summary_CI50,size=1.0,color="goldenrod1") +  
-   geom_hline(yintercept=0,linetype="dashed",linewidth=0.2) +
-   labs(x="",y="Effect size") + 
-   theme_sleek() +
-   theme(axis.title.x=element_blank(),
-         axis.text.x=element_text(size=12,angle=90,vjust=0.5,hjust=1),
-         axis.text.y=element_text(size=12),
-         axis.title.y=element_text(size=15)) +
-   NULL
-                            
-##---------------------------------## probability above/below zero
-my_pnorm<-function(x,output){ return(pnorm(0,mean=x[1],sd=x[2])) }
-beta_df<-data.frame(apply(beta_R_post,2,median),apply(beta_R_post,2,sd))
 prob_below_zero<-apply(beta_df,1,my_pnorm)
 prob_above_zero <- 1-prob_below_zero
 

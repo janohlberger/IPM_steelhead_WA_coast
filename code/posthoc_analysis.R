@@ -27,6 +27,7 @@ N<-dim(fish_dat)[1]
 
 ##==================================================## covariate data
 cov_dat<-read.csv(paste0(home,"/data/IPM_covar_dat_all.csv"))
+drop_seals<-TRUE 
 
 ##=================================================================##
 ##===========================## linear model of recruitment anomalies
@@ -42,26 +43,29 @@ etas_R<-data.frame(median=apply(eta_R_post,2,median)) %>%
 df<-data.frame(year=seq(min(dat_years),max(dat_years),1)) %>%
    left_join(etas_R %>% dplyr::select(year,median)) %>%
    rename(residuals=median) %>%
-   left_join(cov_dat,by='year') 
+   left_join(cov_dat,by='year')
 
 ##------------------------------------------------## scale covariates
 df1<-df %>% dplyr::select(year,residuals) 
 df2<-df %>% dplyr::select(-year,-residuals) 
 df_means<-sapply(df2,function(x) mean(x,na.rm=T))
 df_sds<-sapply(df2,function(x) sd(x,na.rm=T))
-df<-data.frame(cbind(df1,scale(df2))) %>% na.omit()
+df<-data.frame(cbind(df1,scale(df2)))
 ##----------------------------------------------------## correlations
 out<-data.frame(cor(as.matrix(df),use="pairwise.complete.obs"))
 res<-data.frame(round(out[-c(1:3),1:2],2)) %>% dplyr::select(-year)
 
 ##=================================================## model selection
 options(na.action="na.fail")
-##------------------------------------------------## year effect only
-mod_lm_year<-lm(residuals~year,data=df)
-data.frame(summary(mod_lm_year)$coefficients)[2,]
-##------------------------------------------------------## model form
-# form<-formula(residuals~pinks_2+pinks_3+pinks_4+chum_2+chum_3+chum_4+NPGO_2+NPGO_3+NPGO_4+SST_2+SST_3+SST_4+SST_cst_2+SST_cst_3+SST_cst_4+av_CFS_min+av_CFS_max+av_CFS_min_1+av_CFS_max_1) 
-form<-formula(residuals~pinks_4+NPGO_2+SST_2+SST_3+SST_4+av_CFS_min_1+mst_2) 
+##------------------------------------------------------------## form
+## seals_4 included in final model when using short time series
+if(drop_seals){
+   form<-formula(residuals~pinks_2+pinks_3+pinks_4+NPGO_2+NPGO_3+NPGO_4+SST_2+SST_3+SST_4+SST_cst_2+SST_cst_3+SST_cst_4+chum_2+chum_3+chum_4+av_CFS_min+av_CFS_max+av_CFS_min_1+av_CFS_max_1+mst_2)
+   df<-df %>% dplyr::select(-c(seals,seals_3,seals_4)) %>% na.omit()
+}else{
+   form<-formula(residuals~pinks_2+pinks_3+pinks_4+NPGO_2+NPGO_3+NPGO_4+SST_2+SST_3+SST_4+seals_4+SST_cst_2+SST_cst_3+SST_cst_4+chum_2+chum_3+chum_4+av_CFS_min+av_CFS_max+av_CFS_min_1+av_CFS_max_1+mst_2)
+   df<-df %>% dplyr::select(-c(seals,seals_3)) %>% na.omit()
+}
 ##---------------------------------------------------## model fitting
 mod_lm_full<-lm(form,data=df)
 mod_select<-dredge(mod_lm_full,trace=F,rank="AICc")
@@ -95,22 +99,26 @@ relimp<-calc.relimp(mod_rec,type="lmg") ## print(relimp)
 v1<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"pinks")]))
 v2<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"SST")]))
 v3<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"NPGO")]))
-# v4<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"CFS")]))
-relimp_df<-data.frame(pinks=v1,sst=v2,npgo=v3)#,flow=v4)
-relimp_df<-round(relimp_df*100,2) ## % of response variance explained
-round(sum(relimp_df),2) ## total % of response variance explained
+relimp_df<-data.frame(pinks=v1,sst=v2,npgo=v3) %>%
+   mutate_if(is.numeric,~round(.*100,2)) %>%
+   mutate(sum=round(rowSums(.),2)) 
 
-write.csv(relimp_df,"percent_recruit_var_expl_posthoc.csv")
+write.csv(relimp_df,"percent_recruit_var_expl_posthoc.csv",row.names=FALSE) ## % of response variance explained
 
 ##=================================================## partial effects
 pdf("IPM-sthd-recruitment-anamaly-covariates-effects.pdf",width=4*nterms,height=4)
 layout(matrix(c(1:length(mod_terms)),nrow=1,byrow=T))
 par(mar=c(4,4,1,1),mgp=c(2.5,0.5,0),tcl=-0.3,cex.lab=1.5,cex.axis=1.2)
-xlab<-c("NPGO","Pink salmon abundance (millions)","Summer SST (°C)")# ,"Summer low flow (cf/s)")
+xlabels<-data.frame(term=mod_terms) %>%
+   mutate(name=case_when(
+      grepl("pink",term) ~ "Pink salmon abundance (millions)", 
+      grepl("SST",term) ~ "Summer SST (°C)", 
+      grepl("NPGO",term) ~ "NPGO", 
+   ))
 xtrans<-function(x) { x*df_sds[names(df_sds)==covar]+df_means[names(df_means)==covar] }
 for(i in 1:length(mod_terms)) {
    covar<-mod_terms[i]
-   visreg(mod_rec,xvar=covar,xlab=xlab[i],partial=T,ylab="Partial effect on recruitment anomaly",scale="response",xtrans=xtrans,points.par=list(cex=1,pch=16,col=1),fill.par=list(col=alpha(1,0.1)),line.par=list(col=1))
+   visreg(mod_rec,xvar=covar,xlab=xlabels$name[i],partial=T,ylab="Partial effect on recruitment anomaly",scale="response",xtrans=xtrans,points.par=list(cex=1,pch=16,col=1),fill.par=list(col=alpha(1,0.1)),line.par=list(col=1))
 }
 dev.off()
 
@@ -138,18 +146,22 @@ df1<-df %>% dplyr::select(year,survival)
 df2<-df %>% dplyr::select(-year,-survival) 
 df_means<-sapply(df2,function(x) mean(x,na.rm=T))
 df_sds<-sapply(df2,function(x) sd(x,na.rm=T))
-df<-data.frame(cbind(df1,scale(df2))) %>% na.omit()
+df<-data.frame(cbind(df1,scale(df2)))
 ##----------------------------------------------------## correlations
 out<-data.frame(cor(as.matrix(df),use="pairwise.complete.obs"))
-res<-data.frame(round(out[-c(1:3),1:2],2)) %>% dplyr::select(-year)
+res<-data.frame(round(out[-c(1:2),1:2],2)) %>% dplyr::select(-year)
 
 ##=================================================## model selection
 options(na.action="na.fail")
-##------------------------------------------------## year effect only
-mod_lm_year<-lm(survival~year,data=df)
-data.frame(summary(mod_lm_year)$coefficients)[2,]
-##--------------------------------------------## model form (no lags)
-form<-formula(survival~pinks+NPGO+SST+SST_cst+mst)
+##--------------------------------------------------## form (no lags)
+## seals included in final model when using short time series
+if(drop_seals){
+   form<-formula(survival~pinks+chum+NPGO+SST+SST_cst+mst)
+   df<-df %>% dplyr::select(-c(seals)) %>% na.omit()
+}else{
+   form<-formula(survival~pinks+chum+NPGO+SST+SST_cst+mst+seals)
+   df<-df %>% na.omit()
+}
 ##---------------------------------------------------## model fitting
 mod_lm_full<-lm(form,data=df)
 mod_select<-dredge(mod_lm_full,trace=F,rank="AICc")
@@ -157,7 +169,7 @@ aic_table<-data.frame(mod_select)[1:10,-1]
 mod_delta2<-aic_table[aic_table$delta<2,] ## models with ΔAIC<2
 mod_sel<-get.models(mod_select,subset=1)[[1]] ## lowest AICc model
 index<-which(mod_delta2$df==min(mod_delta2$df)) ## best within ΔAIC<2
-mod_sel<-get.models(mod_select,subset=index)[[1]] ## most parsimonious 
+mod_sel<-get.models(mod_select,subset=index)[[1]] ## most parsimonious
 summary(mod_sel)
 
 # ncovar<-dim(summary(mod_sel)$coefficients)[1]-1
@@ -184,37 +196,38 @@ if(nterms>1) {
 relimp<-calc.relimp(mod_surv,type="lmg") ## print(relimp)
 v1<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"pinks")]))
 v2<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"SST")]))
-#v3<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"NPGO")]))
-relimp_df<-data.frame(pinks=v1,sst=v2) # ,npgo=v3)
-relimp_df<-round(relimp_df*100,2) ## % of response variance explained
-round(sum(relimp_df),2) ## total % of response variance explained
+relimp_df<-data.frame(pinks=v1,sst=v2) %>%
+   mutate_if(is.numeric,~round(.*100,2)) %>%
+   mutate(sum=round(rowSums(.),2)) 
 
-write.csv(relimp_df,"percent_keltsurv_var_expl_posthoc.csv")
+write.csv(relimp_df,"percent_keltsurv_var_expl_posthoc.csv",row.names=FALSE) ## % of response variance explained
 
 ##=================================================## partial effects
 pdf("IPM-sthd-kelt-survival-anomaly-covariate-effects.pdf",width=4*nterms,height=4)
 layout(matrix(c(1:length(mod_terms)),nrow=1,byrow=T))
-par(mar=c(4,4,1,1),mgp=c(2.5,0.5,0),tcl=-0.3,cex.axis=1.1,cex.lab=1.2)
+par(mar=c(4,4,1,1),mgp=c(2.5,0.5,0),tcl=-0.3,cex.lab=1.5,cex.axis=1.2)
 xlabels<-data.frame(term=mod_terms) %>%
    mutate(name=case_when(
       grepl("pink",term) ~ "Pink salmon abundance (millions)", 
       grepl("SST",term) ~ "Summer SST (°C)", 
+      grepl("CFS_min",term) ~ "Summer low flow anomaly (cf/s)", 
       #grepl("NPGO",term) ~ "NPGO", 
    ))
 xtrans<-function(x) { x*df_sds[names(df_sds)==covar]+df_means[names(df_means)==covar] }
 for(i in 1:length(mod_terms)) {
    covar<-mod_terms[i]
-   visreg(mod_surv,xvar=covar,xlab=xlabels$name[i],partial=T,ylab="Partial effect on kelt survival anomaly",scale="response",xtrans=xtrans,points.par=list(cex=1,pch=16,col=1),fill.par=list(col=alpha(1,0.1)),line.par=list(col=1))
+   visreg(mod_surv,xvar=covar,xlab=xlabels$name[i],partial=T,ylab="Partial effect on kelt survival anomaly",scale="response",xtrans=xtrans,points.par=list(cex=0.8,pch=16,col=1),fill.par=list(col=alpha(1,0.1)),line.par=list(col=1))
 } 
 dev.off()
 
 ##=================================================================##
 ##==================## save final data using only selected covariates
 ##=================================================================##
-covar_dat_sel<-covar_dat %>%
-   dplyr::select(year,SST,pinks,NPGO_2,SST_4,pinks_4)
+cov_dat_sel<-cov_dat %>%
+   dplyr::select(year,SST,pinks,NPGO_2,SST_4,pinks_4) %>% 
+   na.omit()
 
-write.csv(covar_dat_sel,paste0(home,"/data/IPM_covar_dat_selected.csv"), row.names=F)
+write.csv(cov_dat_sel,paste0(home,"/data/IPM_covar_dat_selected.csv"), row.names=F)
 
 ##=================================================================##
 ##=================================================================##

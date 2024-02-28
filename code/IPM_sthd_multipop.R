@@ -20,13 +20,13 @@ if(!file.exists(out_dir)) dir.create(file.path(out_dir))
 setwd(file.path(out_dir))
 
 ##========================================================## settings
-covar_effects<-TRUE ## TRUE or FALSE
+covar_effects<-FALSE ## TRUE or FALSE
 year_effect<-FALSE ## TRUE or FALSE
+biastest<-FALSE ## TRUE/FALSE
 
 ##============================================================## data
 fish_dat<-read.csv(paste0(home,"/data/IPM_fish_dat_all.csv")) %>%
    dplyr::select(-F_rate_NA) ## column used for plotting only
-# covar_dat<-read.csv(paste0(home,"/data/IPM_covar_dat_all.csv"))
 covar_dat<-read.csv(paste0(home,"/data/IPM_covar_dat_selected.csv"))
 
 ## no NAs allowed in covariate data
@@ -41,11 +41,9 @@ nY<-length(dat_years) ## number of years
 
 ##======================================## regressions to be included
 if(covar_effects) {
-   # par_models<-list(s_SS~NPGO+SST+pinks,R~NPGO_2+SST_4+pinks_4+av_CFS_min_1)
    par_models<-list(s_SS~SST+pinks,R~NPGO_2+SST_4+pinks_4)
    if(year_effect) { 
-      # par_models<-list(s_SS~year+NPGO+SST+pinks,R~year+NPGO_2+SST_4+pinks_4+av_CFS_min_1)
-      par_models<-list(s_SS~year+SST+pinks,R~year+NPGO_2+SST_4+pinks_4)
+      par_models<-list(s_SS~year+SST+pinks+av_CFS_min,R~year+NPGO_2+SST_4+pinks_4)
    }
 } else {
    if(year_effect) { 
@@ -66,12 +64,11 @@ IPM_fit<-salmonIPM(
       mu_alpha~normal(1.5,0.5),
       mu_p~dirichlet(c(1,2,47,44,5,1)),
       mu_SS~beta(1.5,3)),
-   pars=c(stan_pars("IPM_SSiter_pp"),"zeta_year_R","zeta_year_SS"),
+   pars=c(stan_pars("IPM_SSiter_pp")),
    chains=3, 
-   iter=1000,
-   warmup=500, 
-   control=list(adapt_delta=0.95,max_treedepth=10)
-   # control=list(adapt_delta=0.99,max_treedepth=12)
+   iter=2000,
+   warmup=1000, 
+   # control=list(adapt_delta=0.98,max_treedepth=12)
 )
 
 print(paste(round(max(rowSums(get_elapsed_time(IPM_fit))/60)),"min"))
@@ -82,8 +79,13 @@ if(covar_effects) {
       write.csv(fish_dat,"IPM_fish_dat_with_covars_with_year.csv",row.names=F)
       saveRDS(IPM_fit,"IPM_fit_with_covars_with_year.Rdata")
    }else{
-      write.csv(fish_dat,"IPM_fish_dat_with_covars.csv",row.names=F)
-      saveRDS(IPM_fit,"IPM_fit_with_covars.Rdata")
+      if(biastest){
+         write.csv(fish_dat,"IPM_fish_dat_with_covars.csv",row.names=F)
+         saveRDS(IPM_fit,"IPM_fit_with_covars_biastest.Rdata")
+      }else{
+         write.csv(fish_dat,"IPM_fish_dat_with_covars.csv",row.names=F)
+         saveRDS(IPM_fit,"IPM_fit_with_covars.Rdata")  
+      }
    }
 }else{ 
    if(year_effect) { 
