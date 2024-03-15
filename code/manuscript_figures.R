@@ -380,18 +380,18 @@ p1c <- eta_SS_qs %>%
 
 ##===============================================## covariate effects
 cov_eff_post<-data.frame(extract1(IPM_fit_with_covars,"beta_SS"))
-cov_eff_post$NPGO<-NA
-names(cov_eff_post)<-c("SST","Pinks","NPGO")
+# cov_eff_post$NPGO<-NA; names(cov_eff_post)<-c("SST","Pinks","NPGO")
+names(cov_eff_post)<-c("SST","Pinks","Flow")
 cov_eff_med<-apply(cov_eff_post,2,median) ## median effect sizes
 
 ##---------------------------------------------------## effects plots
 p1b<-cov_eff_post %>% 
    pivot_longer(col=everything(),names_to="name",values_to="value")%>%
-   mutate(name=case_when(
-      name=="NPGO"~"",
-      name=="SST"~"SST",
-      name=="Pinks"~"Pinks"
-      )) %>%
+   # mutate(name=case_when(
+   #    name=="Flow"~"Flow",
+   #    name=="SST"~"SST",
+   #    name=="Pinks"~"Pinks"
+   #    )) %>%
    ggplot(aes(x=name,y=value)) +
    stat_summary(fun.data=summary_CI90,size=0.25,col="goldenrod1") +
    stat_summary(fun.data=summary_CI50,size=1.0,col="goldenrod1") +  

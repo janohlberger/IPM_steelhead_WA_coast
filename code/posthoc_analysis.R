@@ -5,7 +5,7 @@
 ##=================================================================##
 
 ##========================================================## packages
-pkg<-c("here","tidyverse","MuMIn","relaimpo","visreg","Hmisc", "salmonIPM")
+pkg<-c("here","tidyverse","MuMIn","relaimpo","visreg","Hmisc", "salmonIPM","tinytable")
 if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdiff(pkg,rownames(installed.packages())),dependencies=T)}
 invisible(lapply(pkg,library,character.only=T))
 home<-here::here()
@@ -60,7 +60,7 @@ options(na.action="na.fail")
 ##------------------------------------------------------------## form
 ## seals_4 included in final model when using short time series
 if(drop_seals){
-   form<-formula(residuals~pinks_2+pinks_3+pinks_4+NPGO_2+NPGO_3+NPGO_4+SST_2+SST_3+SST_4+SST_cst_2+SST_cst_3+SST_cst_4+chum_2+chum_3+chum_4+av_CFS_min+av_CFS_max+av_CFS_min_1+av_CFS_max_1+mst_2)
+   form<-formula(residuals~pinks_2+pinks_3+pinks_4+NPGO_2+NPGO_3+NPGO_4+SST_2+SST_3+SST_4+SST_cst_2+SST_cst_3+SST_cst_4+chum_2+chum_3+chum_4+av_CFS_min+av_CFS_max+av_CFS_min_1+av_CFS_max_1) ## +mst_2
    df<-df %>% dplyr::select(-c(seals,seals_3,seals_4)) %>% na.omit()
 }else{
    form<-formula(residuals~pinks_2+pinks_3+pinks_4+NPGO_2+NPGO_3+NPGO_4+SST_2+SST_3+SST_4+seals_4+SST_cst_2+SST_cst_3+SST_cst_4+chum_2+chum_3+chum_4+av_CFS_min+av_CFS_max+av_CFS_min_1+av_CFS_max_1+mst_2)
@@ -78,6 +78,35 @@ summary(mod_sel)
 
 # ncovar<-dim(summary(mod_sel)$coefficients)[1]-1
 # par(mfcol=c(1,ncovar),mar=c(4,4,1,1));visreg(mod_sel)
+
+##===========================================## model selection table
+models_subset<-get.models(mod_select,subset=1:10)
+# models_subset<-get.models(mod_select,subset=delta<2) 
+aic_table<-data.frame(mod_select)
+aic_table<-aic_table[1:length(models_subset),]
+aic_table$cum.weights<-cumsum(aic_table$weight)
+num_of_mods<-length(models_subset)
+## add model formulas
+mod_forms<-NA
+for(i in 1:num_of_mods) {
+   use_mod<-models_subset[[i]]
+   form<-as.character(use_mod$call)[2]
+   mod_forms[i]<-form
+}
+mod_forms<-unlist(mod_forms)
+mod_forms<-gsub("residuals","",mod_forms)
+mod_forms<-gsub("[0-9]+","",mod_forms)
+mod_forms<-gsub(" ","",mod_forms)
+mod_forms<-lapply(mod_forms,function(x) substr(x,1,nchar(x)-1))
+mod_forms<-unlist(mod_forms)
+aic_table$Formula<-mod_forms 
+## add rank and round values
+aic_table$Rank<-seq(dim(aic_table)[1])
+aic_table$AIC<-round(aic_table$AIC,2)
+aic_table$deltaAIC<-round(aic_table$delta,2)
+## save table
+aic_table_recruits<-dplyr::select(aic_table,Rank,Formula,AIC,deltaAIC)
+write.csv(aic_table_recruits,"AIC_table_recruits.csv",row.names=FALSE)
 
 ##==================================================## selected model
 mod_rec<-mod_sel
@@ -156,8 +185,10 @@ options(na.action="na.fail")
 ##--------------------------------------------------## form (no lags)
 ## seals included in final model when using short time series
 if(drop_seals){
-   form<-formula(survival~pinks+chum+NPGO+SST+SST_cst+mst)
-   df<-df %>% dplyr::select(-c(seals)) %>% na.omit()
+   form<-formula(survival~pinks+chum+NPGO+SST+SST_cst+av_CFS_max+av_CFS_min) ## +mst
+   df<-df %>% 
+      # dplyr::select(-c(seals)) %>% 
+      na.omit()
 }else{
    form<-formula(survival~pinks+chum+NPGO+SST+SST_cst+mst+seals)
    df<-df %>% na.omit()
@@ -174,6 +205,35 @@ summary(mod_sel)
 
 # ncovar<-dim(summary(mod_sel)$coefficients)[1]-1
 # par(mfcol=c(1,ncovar),mar=c(4,4,1,1));visreg(mod_sel)
+
+##===========================================## model selection table
+models_subset<-get.models(mod_select,subset=1:10)
+# models_subset<-get.models(mod_select,subset=delta<2) 
+aic_table<-data.frame(mod_select)
+aic_table<-aic_table[1:length(models_subset),]
+aic_table$cum.weights<-cumsum(aic_table$weight)
+num_of_mods<-length(models_subset)
+## add model formulas
+mod_forms<-NA
+for(i in 1:num_of_mods) {
+   use_mod<-models_subset[[i]]
+   form<-as.character(use_mod$call)[2]
+   mod_forms[i]<-form
+}
+mod_forms<-unlist(mod_forms)
+mod_forms<-gsub("survival","",mod_forms)
+mod_forms<-gsub("1","",mod_forms)
+mod_forms<-gsub(" ","",mod_forms)
+mod_forms<-lapply(mod_forms,function(x) substr(x,1,nchar(x)-1))
+mod_forms<-unlist(mod_forms)
+aic_table$Formula<-mod_forms 
+## add rank and round values
+aic_table$Rank<-seq(dim(aic_table)[1])
+aic_table$AIC<-round(aic_table$AIC,2)
+aic_table$deltaAIC<-round(aic_table$delta,2)
+## save table
+aic_table_kelts<-dplyr::select(aic_table,Rank,Formula,AIC,deltaAIC)
+write.csv(aic_table_kelts,"AIC_table_kelts.csv",row.names=FALSE)
 
 ##==================================================## selected model
 mod_surv<-mod_sel
@@ -196,7 +256,8 @@ if(nterms>1) {
 relimp<-calc.relimp(mod_surv,type="lmg") ## print(relimp)
 v1<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"pinks")]))
 v2<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"SST")]))
-relimp_df<-data.frame(pinks=v1,sst=v2) %>%
+v3<-as.numeric(sum(relimp$lmg[str_detect(names(relimp$lmg),"CFS")]))
+relimp_df<-data.frame(pinks=v1,sst=v2,flow=v3) %>%
    mutate_if(is.numeric,~round(.*100,2)) %>%
    mutate(sum=round(rowSums(.),2)) 
 
@@ -224,7 +285,7 @@ dev.off()
 ##==================## save final data using only selected covariates
 ##=================================================================##
 cov_dat_sel<-cov_dat %>%
-   dplyr::select(year,SST,pinks,NPGO_2,SST_4,pinks_4) %>% 
+   dplyr::select(year,SST,pinks,NPGO_2,SST_4,pinks_4,av_CFS_min) %>% 
    na.omit()
 
 write.csv(cov_dat_sel,paste0(home,"/data/IPM_covar_dat_selected.csv"), row.names=F)

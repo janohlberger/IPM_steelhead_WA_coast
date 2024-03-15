@@ -20,7 +20,7 @@ if(!file.exists(out_dir)) dir.create(file.path(out_dir))
 setwd(file.path(out_dir))
 
 ##========================================================## settings
-covar_effects<-FALSE ## TRUE or FALSE
+covar_effects<-TRUE ## TRUE or FALSE
 year_effect<-FALSE ## TRUE or FALSE
 biastest<-FALSE ## TRUE/FALSE
 
@@ -41,7 +41,8 @@ nY<-length(dat_years) ## number of years
 
 ##======================================## regressions to be included
 if(covar_effects) {
-   par_models<-list(s_SS~SST+pinks,R~NPGO_2+SST_4+pinks_4)
+   par_models<-list(s_SS~SST+pinks+av_CFS_min,R~NPGO_2+SST_4+pinks_4)
+   # par_models<-list(s_SS~SST+pinks,R~NPGO_2+SST_4+pinks_4)
    if(year_effect) { 
       par_models<-list(s_SS~year+SST+pinks+av_CFS_min,R~year+NPGO_2+SST_4+pinks_4)
    }
