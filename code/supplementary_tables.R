@@ -3,22 +3,17 @@
 ##                   Prepare supplementary tables                  ##
 ##                                                                 ##
 ##=================================================================##
-
-##========================================================## packages
-pkg<-c("here","tidyverse","salmonIPM","posterior")
-if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdiff(pkg,rownames(installed.packages())),dependencies=T)}
-invisible(lapply(pkg,library,character.only=T))
-home<-here::here()
+pacman::p_load(here,tidyverse,posterior,salmonIPM)
 
 ##================================================## output directory
-out_dir<-paste0(home,"/output/")
+out_dir<-paste0(here(),"/output/")
 if(!file.exists(out_dir)) dir.create(file.path(out_dir))
 setwd(file.path(out_dir))
 
 ##========================================## load data and model fit
-covar_dat<-read.csv(paste0(home,"/data/IPM_covar_dat_all.csv"))
-IPM_fit<-readRDS(paste0(home,"/output/IPM_fit_with_covars.Rdata"))
-fish_dat<-read.csv(paste0(home,"/output/IPM_fish_dat_with_covars.csv"))
+covar_dat<-read.csv(paste0(here(),"/data/IPM_covar_dat_all.csv"))
+IPM_fit<-readRDS(paste0(here(),"/output/IPM_fit_with_covars.Rdata"))
+fish_dat<-read.csv(paste0(here(),"/output/IPM_fish_dat_with_covars.csv"))
 pops<-unique(fish_dat$pop)
 
 ##=================================================## hyperparameters
@@ -44,10 +39,15 @@ quants<-data.frame(t(apply(post,2,function(x) quantile(x,prob=cis))))%>%
 write.table(quants,"IPM_table_S1.csv",row.names=T,sep=",")
 
 ##============================## population productivity and capacity
+mu_alphas_post<-data.frame(extract1(IPM_fit,"mu_alpha"))
+mu_alpha_qs<-apply(mu_alphas_post,2,function(x) quantile(x,prob=cis))
 
 alphas_post<-data.frame(extract1(IPM_fit,"alpha"))
 names(alphas_post)<-pops
 alpha_qs<-apply(alphas_post,2,function(x) quantile(x,prob=cis))
+
+mu_Rmax_post<-data.frame(extract1(IPM_fit,"mu_Rmax"))
+mu_Rmax_qs<-apply(mu_Rmax_post,2,function(x) quantile(x,prob=cis))
 
 Rmax_post<-data.frame(extract1(IPM_fit,"Rmax"))
 names(Rmax_post)<-pops
