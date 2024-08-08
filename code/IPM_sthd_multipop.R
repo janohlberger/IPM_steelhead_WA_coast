@@ -3,31 +3,32 @@
 ##                 Fit integrated population model                 ##
 ##                                                                 ##
 ##=================================================================##
-
-##========================================================## packages
-pkg<-c("here","tidyverse","rstan","gtools","salmonIPM")
-if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdiff(pkg,rownames(installed.packages())),dependencies=T)}
-invisible(lapply(pkg,library,character.only=T))
-home<-here::here()
+pacman::p_load(here,tidyverse,rstan,gtools,salmonIPM)
 
 ##===================================================## rstan options
 options(mc.cores=parallel::detectCores())
 rstan_options(auto_write=TRUE)
 
 ##================================================## output directory
-out_dir<-paste0(home,"/output/")
+out_dir<-paste0(here(),"/output/")
 if(!file.exists(out_dir)) dir.create(file.path(out_dir))
 setwd(file.path(out_dir))
 
 ##========================================================## settings
-covar_effects<-TRUE ## TRUE or FALSE
-year_effect<-FALSE ## TRUE or FALSE
+covar_effects<-TRUE ## TRUE/FALSE
+year_effect<-FALSE ## TRUE/FALSE
 biastest<-FALSE ## TRUE/FALSE
 
 ##============================================================## data
-fish_dat<-read.csv(paste0(home,"/data/IPM_fish_dat_all.csv")) %>%
-   dplyr::select(-F_rate_NA) ## column used for plotting only
-covar_dat<-read.csv(paste0(home,"/data/IPM_covar_dat_selected.csv"))
+covar_dat<-read.csv(paste0(here(),"/data/IPM_covar_dat_selected.csv"))
+
+if(biastest){
+   fish_dat<-read.csv(paste0(here(),"/data/IPM_fish_dat_biastest.csv"))%>%
+      dplyr::select(-F_rate_NA) ## column used for plotting only
+}else{
+   fish_dat<-read.csv(paste0(here(),"/data/IPM_fish_dat_all.csv")) %>%
+      dplyr::select(-F_rate_NA) ## column used for plotting only
+}
 
 ## no NAs allowed in covariate data
 if(covar_effects) { 
@@ -42,7 +43,6 @@ nY<-length(dat_years) ## number of years
 ##======================================## regressions to be included
 if(covar_effects) {
    par_models<-list(s_SS~SST+pinks+av_CFS_min,R~NPGO_2+SST_4+pinks_4)
-   # par_models<-list(s_SS~SST+pinks,R~NPGO_2+SST_4+pinks_4)
    if(year_effect) { 
       par_models<-list(s_SS~year+SST+pinks+av_CFS_min,R~year+NPGO_2+SST_4+pinks_4)
    }
@@ -69,10 +69,8 @@ IPM_fit<-salmonIPM(
    chains=3, 
    iter=2000,
    warmup=1000, 
-   # control=list(adapt_delta=0.98,max_treedepth=12)
+   control=list(adapt_delta=0.98,max_treedepth=12)
 )
-
-print(paste(round(max(rowSums(get_elapsed_time(IPM_fit))/60)),"min"))
 
 ##=====================================## save model data and results
 if(covar_effects) { 
