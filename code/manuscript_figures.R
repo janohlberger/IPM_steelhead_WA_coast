@@ -3,41 +3,35 @@
 ##                    Plot manuscript figures                      ##
 ##                                                                 ##
 ##=================================================================##
-
-##========================================================## packages
-pkg<-c("here","tidyverse","cowplot","ggsidekick","gridExtra","salmonIPM","posterior")
-if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdiff(pkg,rownames(installed.packages())),dependencies=T)}
-invisible(lapply(pkg,library,character.only=T))
-theme_set(theme_sleek())
-home<-here::here()
+pacman::p_load(here,tidyverse,cowplot,ggsidekick,salmonIPM,gridExtra, posterior)
 
 ##================================================## output directory
-out_dir<-paste0(home,"/output/")
+out_dir<-paste0(here(),"/output/")
 if(!file.exists(out_dir)) dir.create(file.path(out_dir))
 setwd(file.path(out_dir))
 
 ##=================================================================##
 ##========================================## load data and model fit
 ##=================================================================##
-# covar_dat<-read.csv(paste0(home,"/data/IPM_covar_dat_all.csv"))
-covar_dat<-read.csv(paste0(home,"/data/IPM_covar_dat_selected.csv"))
+# covar_dat<-read.csv(paste0(here(),"/data/IPM_covar_dat_all.csv"))
+covar_dat<-read.csv(paste0(here(),"/data/IPM_covar_dat_selected.csv"))
 
 ##========================================================## IPM fits
 ##----------------------------------------------## without covariates
 file1<-"IPM_fit_without_covars.Rdata"
-IPM_fit_without_covars<-readRDS(paste0(home,"/output/",file1))
+IPM_fit_without_covars<-readRDS(paste0(here(),"/output/",file1))
 ##-------------------------------------------------## with covariates
 file2<-"IPM_fit_with_covars.Rdata"
-IPM_fit_with_covars<-readRDS(paste0(home,"/output/",file2))
+IPM_fit_with_covars<-readRDS(paste0(here(),"/output/",file2))
 
 ##=======================================================## fish data
 ##----------------------------------------------## without covariates
 file3<-"IPM_fish_dat_without_covars.csv"
-fish_dat_without_covars<-read.csv(paste0(home,"/output/",file3))
+fish_dat_without_covars<-read.csv(paste0(here(),"/output/",file3))
 dat_years_without_covars<-sort(unique(fish_dat_without_covars$year))
 ##-------------------------------------------------## with covariates
 file4<-"IPM_fish_dat_with_covars.csv"
-fish_dat_with_covars<-read.csv(paste0(home,"/output/",file4))
+fish_dat_with_covars<-read.csv(paste0(here(),"/output/",file4))
 dat_years_with_covars<-sort(unique(fish_dat_with_covars$year))
 
 ##=====================================## fit and data for main plots
@@ -48,6 +42,7 @@ nP<-length(pops)
 N<-dim(fish_dat)[1]
 
 ##===================================================## plot settings
+theme_set(theme_sleek())
 colors<-rev(c("#A86260","#A5B1C4","#3B4D6B","#89A18D","#747260","#B3872D","#774C2C")) 
 colors<-colorRampPalette(colors)(nP)
 ##-------------------------------------------------------## functions
@@ -59,7 +54,7 @@ probs<-c(0.05,0.25,0.5,0.75,0.95) ## median with 50% and 95% CIs
 ##=======================================================## posterior
 df_post<-as.data.frame(IPM_fit_plot) ## full posterior
 nS<-dim(df_post)[1] ## number of samples
-df_out<-data.frame(summary(IPM_fit_plot)$summary) ## summary 
+df_out<-data.frame(summary(IPM_fit_plot)$summary) ## summary
 
 ##===============================================## observation error
 tau_post<-extract1(IPM_fit_plot,"tau")
