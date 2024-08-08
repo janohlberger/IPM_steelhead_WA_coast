@@ -7,5 +7,6 @@ data/covariates
 data/old_flow_data
 data/fish_data
 data/SST_grid
+output_saved
 output
 map
