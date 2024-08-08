@@ -3,30 +3,25 @@
 ## Post-hoc analysis of shared recruitment/kelt survival anomalies ##
 ##                                                                 ##
 ##=================================================================##
-
-##========================================================## packages
-pkg<-c("here","tidyverse","MuMIn","relaimpo","visreg","Hmisc", "salmonIPM","tinytable")
-if(length(setdiff(pkg,rownames(installed.packages())))>0){install.packages(setdiff(pkg,rownames(installed.packages())),dependencies=T)}
-invisible(lapply(pkg,library,character.only=T))
-home<-here::here()
+pacman::p_load(here,tidyverse,MuMIn,relaimpo,salmonIPM,visreg,Hmisc,tinytable)
 
 ##================================================## output directory
-out_dir<-paste0(home,"/output/")
+out_dir<-paste0(here(),"/output/")
 if(!file.exists(out_dir)) dir.create(file.path(out_dir))
 setwd(file.path(out_dir))
 
 ##=================================================================##
 ##===========================================## load IPM fit and data
 ##=================================================================##
-IPM_fit_no_covars<-readRDS(paste0(home,"/output/IPM_fit_without_covars.Rdata"))
-fish_dat<-read.csv(paste0(home,"/data/IPM_fish_dat_all.csv"))
+IPM_fit_no_covars<-readRDS(paste0(here(),"/output/IPM_fit_without_covars.Rdata"))
+fish_dat<-read.csv(paste0(here(),"/data/IPM_fish_dat_all.csv"))
 dat_years<-sort(unique(fish_dat$year))
 pops<-unique(fish_dat$pop)
 nP<-length(pops)
 N<-dim(fish_dat)[1]
 
 ##==================================================## covariate data
-cov_dat<-read.csv(paste0(home,"/data/IPM_covar_dat_all.csv"))
+cov_dat<-read.csv(paste0(here(),"/data/IPM_covar_dat_all.csv"))
 drop_seals<-TRUE 
 
 ##=================================================================##
@@ -288,7 +283,7 @@ cov_dat_sel<-cov_dat %>%
    dplyr::select(year,SST,pinks,NPGO_2,SST_4,pinks_4,av_CFS_min) %>% 
    na.omit()
 
-write.csv(cov_dat_sel,paste0(home,"/data/IPM_covar_dat_selected.csv"), row.names=F)
+write.csv(cov_dat_sel,paste0(here(),"/data/IPM_covar_dat_selected.csv"), row.names=F)
 
 ##=================================================================##
 ##=================================================================##
