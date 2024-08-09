@@ -22,7 +22,6 @@ The `code` directory contains the following scripts:
 | `posthoc_analysis.R`    | Post-hoc analysis for covariate selection |
 | `manuscript_figures.R`  | Produces the main text figures            |
 | `supplementary_tables.R`| Produces the supplementary tables         |
-| `year_effects.R`        | Compares models with/without year effects |
 
 To produce the main figures only, run `IPM_sthd_multipop.R` using covar_effects=TRUE and using covar_effects=FALSE and subsequently run `manuscript_figures.R`.
 
